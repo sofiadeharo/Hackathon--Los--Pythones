@@ -65,6 +65,7 @@ Electro-call is an intelligent patch scheduling application that uses Machine Le
 1. **Clone the repository**
 ```bash
 git clone https://github.com/sofiadeharo/Hackathon--Los--Pythones.git
+cd Hackathon--Los--Pythones
 ```
 
 2. **Install Python dependencies**
