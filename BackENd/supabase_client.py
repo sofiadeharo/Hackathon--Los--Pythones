@@ -62,7 +62,7 @@ class SupabaseDataFetcher:
         """
         Fetch crew availability from Supabase.
         Expected table: crew_members
-        Columns: id, name, role, available_hours (JSON array of [start, end] pairs), skills (JSON array)
+        Columns: name, available_hours (JSON array of [start, end] pairs), skill_level (1-5)
         """
         if self.client:
             try:
@@ -70,11 +70,9 @@ class SupabaseDataFetcher:
                 crew_members = []
                 for row in response.data:
                     crew_members.append(CrewMember(
-                        id=row['id'],
                         name=row['name'],
-                        role=row['role'],
                         available_hours=row['available_hours'],
-                        skills=row.get('skills', [])
+                        skill_level=row.get('skill_level', 3)
                     ))
                 print(f"Fetched {len(crew_members)} crew members from Supabase")
                 return crew_members
@@ -88,7 +86,7 @@ class SupabaseDataFetcher:
         """
         Fetch patches from Supabase.
         Expected table: patches
-        Columns: id, name, duration, priority, min_crew, status, notes, is_urgent
+        Columns: id, name, duration, priority, min_crew
         """
         if self.client:
             try:
@@ -100,10 +98,7 @@ class SupabaseDataFetcher:
                         name=row['name'],
                         duration=row['duration'],
                         priority=row['priority'],
-                        min_crew=row['min_crew'],
-                        status=row.get('status', 'pending'),
-                        notes=row.get('notes', ''),
-                        is_urgent=row.get('is_urgent', False)
+                        min_crew=row['min_crew']
                     ))
                 print(f"Fetched {len(patches)} patches from Supabase")
                 return patches
@@ -177,31 +172,21 @@ class SupabaseDataFetcher:
     def _generate_fallback_crew(self) -> List[CrewMember]:
         """Generate sample crew when Supabase is unavailable"""
         return [
-            CrewMember(id=1, name="Alex Chen", role="Senior Engineer", 
-                      available_hours=[(8, 16), (18, 22)], skills=["Security", "Database"]),
-            CrewMember(id=2, name="Sarah Miller", role="Systems Admin", 
-                      available_hours=[(9, 17)], skills=["Networking", "Cloud"]),
-            CrewMember(id=3, name="Mike Johnson", role="DevOps Engineer", 
-                      available_hours=[(10, 18)], skills=["Automation", "Security"]),
-            CrewMember(id=4, name="Emily Davis", role="Network Specialist", 
-                      available_hours=[(7, 15), (20, 23)], skills=["Networking", "Monitoring"]),
-            CrewMember(id=5, name="David Wilson", role="Security Analyst", 
-                      available_hours=[(13, 21)], skills=["Security", "Compliance"])
+            CrewMember(name="Alex Chen", available_hours=[(0, 8), (20, 24)], skill_level=5),
+            CrewMember(name="Sarah Miller", available_hours=[(6, 14), (22, 24)], skill_level=4),
+            CrewMember(name="Mike Johnson", available_hours=[(18, 24)], skill_level=5),
+            CrewMember(name="Emily Davis", available_hours=[(0, 6), (22, 24)], skill_level=3),
+            CrewMember(name="David Wilson", available_hours=[(1, 9), (19, 24)], skill_level=4)
         ]
     
     def _generate_fallback_patches(self) -> List[Patch]:
         """Generate sample patches when Supabase is unavailable"""
         return [
-            Patch(id=1, name="Security Update CVE-2024", duration=3, priority=5, 
-                  min_crew=2, status="pending", is_urgent=True),
-            Patch(id=2, name="Database Migration", duration=4, priority=4, 
-                  min_crew=3, status="pending", is_urgent=False),
-            Patch(id=3, name="API Gateway Update", duration=2, priority=3, 
-                  min_crew=2, status="pending", is_urgent=False),
-            Patch(id=4, name="Monitoring System Upgrade", duration=2, priority=3, 
-                  min_crew=1, status="pending", is_urgent=False),
-            Patch(id=5, name="Load Balancer Config", duration=1, priority=2, 
-                  min_crew=1, status="pending", is_urgent=False)
+            Patch(id=1, name="Database Security Update", duration=2, priority=5, min_crew=2),
+            Patch(id=2, name="Web Server Patch", duration=1, priority=3, min_crew=1),
+            Patch(id=3, name="Core Network Firmware", duration=3, priority=5, min_crew=3),
+            Patch(id=4, name="Application Server Update", duration=1.5, priority=4, min_crew=2),
+            Patch(id=5, name="Backup System Patch", duration=2, priority=2, min_crew=1)
         ]
 
 # Global instance
