@@ -1,18 +1,21 @@
-/* Professional Electrical Theme */
+/* Clean Corporate Theme */
 :root {
-    --bg-dark: #0f1419;
-    --bg-darker: #0a0e13;
-    --electric-blue: #3b82f6;
-    --electric-purple: #8b5cf6;
-    --electric-cyan: #06b6d4;
-    --electric-pink: #ec4899;
-    --neon-green: #10b981;
-    --warning-orange: #f59e0b;
-    --panel-bg: rgba(17, 24, 39, 0.92);
-    --panel-border: rgba(59, 130, 246, 0.2);
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --accent-glow: rgba(59, 130, 246, 0.15);
+    --bg-dark: #f8fafc;
+    --bg-darker: #f1f5f9;
+    --primary-blue: #0f172a;
+    --accent-blue: #3b82f6;
+    --secondary-blue: #64748b;
+    --success-green: #059669;
+    --warning-amber: #d97706;
+    --panel-bg: #ffffff;
+    --panel-border: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --hover-bg: #f1f5f9;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -22,32 +25,27 @@
 }
 
 body {
-    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
     background: var(--bg-darker);
     color: var(--text-primary);
     overflow-x: hidden;
     min-height: 100vh;
+    line-height: 1.6;
 }
 
-/* Subtle Grid Background */
+/* Clean Background Pattern */
 .circuit-bg {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: 
-        linear-gradient(90deg, transparent 49%, rgba(59, 130, 246, 0.03) 49%, rgba(59, 130, 246, 0.03) 51%, transparent 51%),
-        linear-gradient(0deg, transparent 49%, rgba(139, 92, 246, 0.02) 49%, rgba(139, 92, 246, 0.02) 51%, transparent 51%);
-    background-size: 60px 60px;
-    opacity: 0.5;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     z-index: -1;
-    animation: circuit-move 40s linear infinite;
 }
 
-@keyframes circuit-move {
-    0% { background-position: 0 0; }
-    100% { background-position: 60px 60px; }
+@keyframes circuit-move-disabled {
+    /* Static background for corporate look */
 }
 
 /* Container */
@@ -60,16 +58,13 @@ body {
 /* Header */
 .header {
     text-align: center;
-    margin-bottom: 30px;
-    padding: 30px;
-    background: linear-gradient(135deg, var(--panel-bg), rgba(59, 130, 246, 0.05));
+    margin-bottom: 32px;
+    padding: 40px 30px;
+    background: var(--panel-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(59, 130, 246, 0.1);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
     position: relative;
-    overflow: hidden;
 }
 
 .header::before {
@@ -87,48 +82,37 @@ body {
 
 .logo-icon {
     font-size: 48px;
-    filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
-    animation: subtle-pulse 4s ease-in-out infinite;
+    color: var(--accent-blue);
 }
 
-@keyframes subtle-pulse {
-    0%, 100% { 
-        filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
-        transform: scale(1);
-    }
-    50% { 
-        filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.4));
-        transform: scale(1.02);
-    }
+@keyframes subtle-pulse-disabled {
+    /* Disabled for corporate look */
 }
 
 .title {
-    font-size: 42px;
-    font-weight: 900;
-    letter-spacing: 4px;
-    background: linear-gradient(90deg, var(--electric-blue), var(--electric-purple), var(--electric-cyan));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--primary-blue);
     position: relative;
     z-index: 1;
 }
 
 .voltage {
     display: inline-block;
-    animation: subtle-fade 3s ease-in-out infinite;
+    color: var(--accent-blue);
 }
 
-@keyframes subtle-fade {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.85; }
+@keyframes subtle-fade-disabled {
+    /* Disabled for corporate look */
 }
 
 .subtitle {
-    font-size: 16px;
+    font-size: 15px;
     color: var(--text-secondary);
-    margin-top: 10px;
-    letter-spacing: 2px;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+    font-weight: 500;
     position: relative;
     z-index: 1;
 }
@@ -144,12 +128,11 @@ body {
 .stat-card {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    padding: 25px;
+    border-radius: 8px;
+    padding: 24px;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     position: relative;
-    overflow: hidden;
 }
 
 .stat-card::before {
@@ -157,9 +140,9 @@ body {
 }
 
 .stat-card:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-    transform: translateY(-2px);
+    border-color: var(--accent-blue);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
 .stat-card:hover::before {
@@ -167,23 +150,24 @@ body {
 }
 
 .stat-icon {
-    font-size: 36px;
-    margin-bottom: 10px;
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.9;
 }
 
 .stat-value {
-    font-size: 36px;
-    font-weight: bold;
-    color: var(--electric-cyan);
-    text-shadow: 0 0 10px rgba(0, 255, 249, 0.5);
-    margin: 10px 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--primary-blue);
+    margin: 8px 0;
 }
 
 .stat-label {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    font-weight: 500;
 }
 
 /* Main Grid */
@@ -198,28 +182,28 @@ body {
 .panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .panel:hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 .panel-header {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.06));
-    padding: 20px;
+    background: var(--hover-bg);
+    padding: 18px 20px;
     border-bottom: 1px solid var(--panel-border);
 }
 
 .panel-header h2 {
-    font-size: 20px;
-    letter-spacing: 2px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
     text-transform: uppercase;
+    color: var(--primary-blue);
 }
 
 /* Day Selector */
@@ -329,18 +313,18 @@ body {
 
 .chart-bar {
     flex: 1;
-    background: linear-gradient(to top, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.6));
-    border-radius: 4px 4px 0 0;
+    background: var(--accent-blue);
+    border-radius: 3px 3px 0 0;
     position: relative;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     cursor: pointer;
     min-width: 15px;
     max-width: 50px;
 }
 
 .chart-bar:hover {
-    background: linear-gradient(to top, rgba(59, 130, 246, 1), rgba(139, 92, 246, 0.8));
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    background: #2563eb;
+    opacity: 0.9;
 }
 
 .chart-bar-label {
@@ -410,20 +394,22 @@ body {
 
 /* Patch List */
 .patch-item {
-    padding: 15px;
-    margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.2);
-    border-left: 3px solid var(--electric-blue);
-    border-radius: 6px;
-    transition: all 0.3s ease;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--hover-bg);
+    border-left: 3px solid var(--accent-blue);
+    border-radius: 5px;
+    transition: all 0.2s ease;
     cursor: pointer;
+    border: 1px solid transparent;
 }
 
 .patch-item:hover {
-    background: rgba(59, 130, 246, 0.1);
-    border-left-color: rgba(59, 130, 246, 0.8);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-    transform: translateX(3px);
+    background: var(--panel-bg);
+    border-left-color: var(--accent-blue);
+    border-color: var(--panel-border);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(2px);
     border-left: 4px solid var(--electric-cyan);
 }
 
@@ -482,23 +468,22 @@ body {
 
 .btn-optimize {
     position: relative;
-    padding: 18px 50px;
-    font-size: 18px;
+    padding: 14px 36px;
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: 2px;
+    letter-spacing: 0.3px;
     color: #ffffff;
-    background: linear-gradient(135deg, var(--electric-blue), var(--electric-purple));
+    background: var(--accent-blue);
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-optimize:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    background: #2563eb;
+    box-shadow: var(--shadow-md);
 }
 
 .btn-optimize:active {
@@ -522,24 +507,22 @@ body {
 
 /* Add Patch Button */
 .btn-add-patch {
-    padding: 8px 16px;
+    padding: 7px 14px;
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.2px;
     color: #ffffff;
-    background: linear-gradient(135deg, var(--neon-green), var(--electric-cyan));
+    background: var(--success-green);
     border: none;
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-    position: relative;
-    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-add-patch:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    background: #047857;
+    box-shadow: var(--shadow-md);
 }
 
 .btn-add-patch:active {
@@ -765,20 +748,20 @@ body {
 /* AI Chatbot FAB Button */
 .chat-fab {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 64px;
-    height: 64px;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--electric-blue), var(--electric-purple));
+    background: var(--accent-blue);
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    box-shadow: var(--shadow-lg);
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 @keyframes fab-pulse-disabled {
@@ -786,8 +769,8 @@ body {
 }
 
 .chat-fab:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.6);
+    background: #2563eb;
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15);
 }
 
 .chat-fab:active {
