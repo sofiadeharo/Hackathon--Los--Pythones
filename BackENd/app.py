@@ -6,6 +6,7 @@ import os
 from scheduler import PatchScheduler
 from models import NetworkLoad, CrewMember, Patch
 from ml_predictor import predictor
+from supabase_client import supabase_fetcher
 
 app = Flask(__name__)
 CORS(app)
@@ -13,12 +14,13 @@ CORS(app)
 # Initialize scheduler
 scheduler = PatchScheduler()
 
-# Store patches in memory (will reset on server restart)
+# Store custom patches in memory (will reset on server restart)
 custom_patches = []
-next_patch_id = 6  # Start from 6 since we have 5 default patches
+next_patch_id = 100  # Start from 100 to avoid conflicts with Supabase IDs
 
 # Train ML model on startup
 print("Training ML model for network load prediction...")
+print("Initializing Supabase connection...")
 
 # Sample data generation
 def generate_sample_network_loads():
@@ -76,13 +78,13 @@ def generate_sample_patches():
 @app.route('/api/network-load', methods=['GET'])
 def get_network_load():
     """Get network load data for the week (7 days × 24 hours = 168 data points)"""
-    loads = generate_sample_network_loads()
+    loads = supabase_fetcher.fetch_network_loads()
     return jsonify([load.to_dict() for load in loads])
 
 @app.route('/api/best-hours', methods=['GET'])
 def get_best_hours():
     """Get the best hours for patching (lowest network load)"""
-    loads = generate_sample_network_loads()
+    loads = supabase_fetcher.fetch_network_loads()
     # Sort by load and get top 10 best hours
     sorted_loads = sorted(loads, key=lambda x: x.load_kilowatts)
     best_hours = sorted_loads[:10]
@@ -107,8 +109,8 @@ def get_best_hours():
 
 @app.route('/api/crew', methods=['GET'])
 def get_crew():
-    """Get crew availability"""
-    crew = generate_sample_crew()
+    """Get crew availability from Supabase"""
+    crew = supabase_fetcher.fetch_crew_members()
     return jsonify([member.to_dict() for member in crew])
 
 @app.route('/api/patches', methods=['GET', 'POST'])
@@ -117,8 +119,8 @@ def handle_patches():
     global custom_patches, next_patch_id
     
     if request.method == 'GET':
-        # Return all patches (default + custom)
-        patches = generate_sample_patches() + custom_patches
+        # Return all patches (from Supabase + custom in-memory)
+        patches = supabase_fetcher.fetch_patches() + custom_patches
         return jsonify([patch.to_dict() for patch in patches])
     
     elif request.method == 'POST':
@@ -153,10 +155,10 @@ def optimize_schedule():
     """Calculate optimal patch schedule"""
     global custom_patches
     try:
-        # Get data
-        network_loads = generate_sample_network_loads()
-        crew = generate_sample_crew()
-        patches = generate_sample_patches() + custom_patches  # Include custom patches
+        # Get data from Supabase
+        network_loads = supabase_fetcher.fetch_network_loads()
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
         
         # Run optimization
         schedule = scheduler.optimize(network_loads, crew, patches)
@@ -192,9 +194,9 @@ def schedule_patch():
 def get_stats():
     """Get overall system statistics"""
     global custom_patches
-    network_loads = generate_sample_network_loads()
-    crew = generate_sample_crew()
-    patches = generate_sample_patches() + custom_patches  # Include custom patches
+    network_loads = supabase_fetcher.fetch_network_loads()
+    crew = supabase_fetcher.fetch_crew_members()
+    patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
     
     avg_load = sum(load.load_kilowatts for load in network_loads) / len(network_loads)
     
@@ -239,10 +241,10 @@ def chat():
         if not user_message:
             return jsonify({'success': False, 'error': 'No message provided'}), 400
         
-        # Get current system context
-        network_loads = generate_sample_network_loads()
-        crew = generate_sample_crew()
-        patches = generate_sample_patches() + custom_patches  # Include custom patches
+        # Get current system context from Supabase
+        network_loads = supabase_fetcher.fetch_network_loads()
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
         
         # Ensure model is trained
         if not predictor.is_trained:
@@ -321,7 +323,7 @@ def chat():
 def get_ml_stats():
     """Get ML model statistics and predictions"""
     try:
-        network_loads = generate_sample_network_loads()
+        network_loads = supabase_fetcher.fetch_network_loads()
         
         # Train if not already trained
         if not predictor.is_trained:
@@ -342,9 +344,9 @@ def get_ml_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Train ML model on startup with sample data
+    # Train ML model on startup with data from Supabase
     print("Initializing ML-powered patch advisor...")
-    initial_loads = generate_sample_network_loads()
+    initial_loads = supabase_fetcher.fetch_network_loads()
     predictor.train(initial_loads)
     print(f"Model trained successfully on {len(initial_loads)} data points")
     print(f"Model stats: {predictor.get_model_stats()}")
