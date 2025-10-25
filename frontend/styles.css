@@ -1,17 +1,18 @@
-/* Electrical Aesthetic Theme */
+/* Professional Electrical Theme */
 :root {
-    --bg-dark: #0a0e27;
-    --bg-darker: #060916;
-    --electric-blue: #00d9ff;
-    --electric-purple: #b429f9;
-    --electric-cyan: #00fff9;
-    --electric-pink: #ff006e;
-    --neon-green: #39ff14;
-    --warning-orange: #ff9500;
-    --panel-bg: rgba(15, 23, 42, 0.85);
-    --panel-border: rgba(0, 217, 255, 0.3);
-    --text-primary: #e0e7ff;
+    --bg-dark: #0f1419;
+    --bg-darker: #0a0e13;
+    --electric-blue: #3b82f6;
+    --electric-purple: #8b5cf6;
+    --electric-cyan: #06b6d4;
+    --electric-pink: #ec4899;
+    --neon-green: #10b981;
+    --warning-orange: #f59e0b;
+    --panel-bg: rgba(17, 24, 39, 0.92);
+    --panel-border: rgba(59, 130, 246, 0.2);
+    --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
+    --accent-glow: rgba(59, 130, 246, 0.15);
 }
 
 * {
@@ -28,7 +29,7 @@ body {
     min-height: 100vh;
 }
 
-/* Animated Circuit Background */
+/* Subtle Grid Background */
 .circuit-bg {
     position: fixed;
     top: 0;
@@ -36,17 +37,17 @@ body {
     width: 100%;
     height: 100%;
     background: 
-        linear-gradient(90deg, transparent 49%, rgba(0, 217, 255, 0.1) 49%, rgba(0, 217, 255, 0.1) 51%, transparent 51%),
-        linear-gradient(0deg, transparent 49%, rgba(180, 41, 249, 0.1) 49%, rgba(180, 41, 249, 0.1) 51%, transparent 51%);
-    background-size: 50px 50px;
-    opacity: 0.3;
+        linear-gradient(90deg, transparent 49%, rgba(59, 130, 246, 0.03) 49%, rgba(59, 130, 246, 0.03) 51%, transparent 51%),
+        linear-gradient(0deg, transparent 49%, rgba(139, 92, 246, 0.02) 49%, rgba(139, 92, 246, 0.02) 51%, transparent 51%);
+    background-size: 60px 60px;
+    opacity: 0.5;
     z-index: -1;
-    animation: circuit-move 20s linear infinite;
+    animation: circuit-move 40s linear infinite;
 }
 
 @keyframes circuit-move {
     0% { background-position: 0 0; }
-    100% { background-position: 50px 50px; }
+    100% { background-position: 60px 60px; }
 }
 
 /* Container */
@@ -61,35 +62,18 @@ body {
     text-align: center;
     margin-bottom: 30px;
     padding: 30px;
-    background: linear-gradient(135deg, var(--panel-bg), rgba(180, 41, 249, 0.1));
-    border: 2px solid var(--electric-blue);
-    border-radius: 15px;
+    background: linear-gradient(135deg, var(--panel-bg), rgba(59, 130, 246, 0.05));
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
     box-shadow: 
-        0 0 20px rgba(0, 217, 255, 0.3),
-        inset 0 0 20px rgba(0, 217, 255, 0.1);
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(59, 130, 246, 0.1);
     position: relative;
     overflow: hidden;
 }
 
 .header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-        45deg,
-        transparent,
-        rgba(0, 217, 255, 0.1),
-        transparent
-    );
-    animation: header-shine 3s linear infinite;
-}
-
-@keyframes header-shine {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    display: none;
 }
 
 .logo-container {
@@ -103,17 +87,18 @@ body {
 
 .logo-icon {
     font-size: 48px;
-    animation: pulse-glow 2s ease-in-out infinite;
+    filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
+    animation: subtle-pulse 4s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
+@keyframes subtle-pulse {
     0%, 100% { 
-        filter: drop-shadow(0 0 10px var(--electric-cyan));
+        filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
         transform: scale(1);
     }
     50% { 
-        filter: drop-shadow(0 0 20px var(--electric-blue));
-        transform: scale(1.1);
+        filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.4));
+        transform: scale(1.02);
     }
 }
 
@@ -131,12 +116,12 @@ body {
 
 .voltage {
     display: inline-block;
-    animation: voltage-flicker 1.5s infinite;
+    animation: subtle-fade 3s ease-in-out infinite;
 }
 
-@keyframes voltage-flicker {
+@keyframes subtle-fade {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    50% { opacity: 0.85; }
 }
 
 .subtitle {
@@ -158,8 +143,8 @@ body {
 
 .stat-card {
     background: var(--panel-bg);
-    border: 2px solid var(--panel-border);
-    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
     padding: 25px;
     text-align: center;
     transition: all 0.3s ease;
@@ -168,24 +153,17 @@ body {
 }
 
 .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.2), transparent);
-    transition: left 0.5s ease;
+    display: none;
 }
 
 .stat-card:hover {
-    border-color: var(--electric-cyan);
-    box-shadow: 0 0 25px rgba(0, 217, 255, 0.4);
-    transform: translateY(-5px);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+    transform: translateY(-2px);
 }
 
 .stat-card:hover::before {
-    left: 100%;
+    display: none;
 }
 
 .stat-icon {
@@ -219,22 +197,23 @@ body {
 /* Panel Styles */
 .panel {
     background: var(--panel-bg);
-    border: 2px solid var(--panel-border);
-    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     transition: all 0.3s ease;
 }
 
 .panel:hover {
-    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.2);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 .panel-header {
-    background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(180, 41, 249, 0.2));
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.06));
     padding: 20px;
-    border-bottom: 2px solid var(--panel-border);
+    border-bottom: 1px solid var(--panel-border);
 }
 
 .panel-header h2 {
@@ -350,7 +329,7 @@ body {
 
 .chart-bar {
     flex: 1;
-    background: linear-gradient(to top, var(--electric-blue), var(--electric-purple));
+    background: linear-gradient(to top, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.6));
     border-radius: 4px 4px 0 0;
     position: relative;
     transition: all 0.3s ease;
@@ -360,8 +339,8 @@ body {
 }
 
 .chart-bar:hover {
-    background: linear-gradient(to top, var(--electric-cyan), var(--electric-blue));
-    box-shadow: 0 0 15px rgba(0, 217, 255, 0.6);
+    background: linear-gradient(to top, rgba(59, 130, 246, 1), rgba(139, 92, 246, 0.8));
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
 .chart-bar-label {
@@ -433,19 +412,18 @@ body {
 .patch-item {
     padding: 15px;
     margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.3);
-    border-left: 4px solid var(--electric-blue);
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--electric-blue);
+    border-radius: 6px;
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
 .patch-item:hover {
-    background: rgba(0, 217, 255, 0.15);
-    border-left-color: var(--electric-cyan);
-    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
-    transform: translateX(5px);
-    border: 2px solid var(--electric-cyan);
+    background: rgba(59, 130, 246, 0.1);
+    border-left-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+    transform: translateX(3px);
     border-left: 4px solid var(--electric-cyan);
 }
 
@@ -504,23 +482,23 @@ body {
 
 .btn-optimize {
     position: relative;
-    padding: 20px 60px;
-    font-size: 20px;
-    font-weight: bold;
-    letter-spacing: 3px;
-    color: var(--bg-darker);
+    padding: 18px 50px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #ffffff;
     background: linear-gradient(135deg, var(--electric-blue), var(--electric-purple));
     border: none;
-    border-radius: 50px;
+    border-radius: 8px;
     cursor: pointer;
     overflow: hidden;
     transition: all 0.3s ease;
-    box-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-optimize:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 50px rgba(0, 217, 255, 0.8);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }
 
 .btn-optimize:active {
@@ -547,22 +525,21 @@ body {
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--bg-darker);
+    letter-spacing: 0.5px;
+    color: #ffffff;
     background: linear-gradient(135deg, var(--neon-green), var(--electric-cyan));
     border: none;
-    border-radius: 20px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     position: relative;
     overflow: hidden;
 }
 
 .btn-add-patch:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(57, 255, 20, 0.6);
-    background: linear-gradient(135deg, var(--electric-cyan), var(--neon-green));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-add-patch:active {
@@ -790,35 +767,27 @@ body {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 70px;
-    height: 70px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--electric-blue), var(--electric-purple));
-    border: 3px solid var(--electric-cyan);
+    border: none;
     cursor: pointer;
-    box-shadow: 0 0 30px rgba(0, 217, 255, 0.6);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    animation: fab-pulse 2s infinite;
 }
 
-@keyframes fab-pulse {
-    0%, 100% {
-        box-shadow: 0 0 30px rgba(0, 217, 255, 0.6);
-        transform: scale(1);
-    }
-    50% {
-        box-shadow: 0 0 50px rgba(0, 217, 255, 0.9);
-        transform: scale(1.05);
-    }
+@keyframes fab-pulse-disabled {
+    /* Animation disabled for professional look */
 }
 
 .chat-fab:hover {
-    transform: scale(1.1) rotate(10deg);
-    box-shadow: 0 0 60px rgba(0, 217, 255, 1);
+    transform: scale(1.05);
+    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.6);
 }
 
 .chat-fab:active {
