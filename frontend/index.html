@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Electro-call - Optimize Your System Updates</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background circuit pattern -->
+    <div class="circuit-bg"></div>
+    
+    <!-- Main container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-container">
+                <div class="logo-icon">⚡</div>
+                <h1 class="title">ELECTRO-CALL<span class="voltage">⚡</span></h1>
+            </div>
+            <div class="subtitle">AI-Powered System Maintenance Optimization</div>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card" style="grid-column: span 1;">
+                <div class="stat-icon">🌙</div>
+                <div class="stat-label" style="margin-bottom: 10px;">Lowest Load Hours</div>
+                <div id="lowLoadHours" style="font-size: 13px; line-height: 1.6;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="totalCrew">--</div>
+                <div class="stat-label">Available Crew</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔧</div>
+                <div class="stat-value" id="totalPatches">--</div>
+                <div class="stat-label">Pending Patches</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Left Column: Network Load & Crew -->
+            <div class="left-column">
+                <!-- Network Load Chart -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>⚡ Network Load (kW)</h2>
+                        <div style="font-size: 12px; margin-top: 5px; color: var(--text-secondary);">
+                            <span id="bestHourDisplay">Best patch hour: Loading...</span>
+                        </div>
+                        <!-- Day Selector -->
+                        <div class="day-selector">
+                            <label for="daySlider" style="font-size: 14px; margin-right: 10px;">Select Day:</label>
+                            <input type="range" id="daySlider" min="0" max="6" value="0" class="day-slider">
+                            <span id="dayLabel" class="day-label">Monday</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="chart-container" id="networkLoadChart"></div>
+                    </div>
+                </div>
+
+                <!-- Crew Availability -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>👥 Crew Availability</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div id="crewList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Patches & Schedule -->
+            <div class="right-column">
+                <!-- Pending Patches -->
+                <div class="panel">
+                    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>🔧 Pending Patches</h2>
+                        <button class="btn-add-patch" id="addPatchBtn" title="Add New Patch">
+                            <span>+ Add Patch</span>
+                        </button>
+                    </div>
+                    <div class="panel-content">
+                        <div id="patchList"></div>
+                    </div>
+                </div>
+
+                <!-- Optimize Button -->
+                <div class="optimize-section">
+                    <button class="btn-optimize" id="optimizeBtn">
+                        <span class="btn-text">⚡ OPTIMIZE SCHEDULE ⚡</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+
+                <!-- Optimized Schedule -->
+                <div class="panel" id="schedulePanel" style="display: none;">
+                    <div class="panel-header">
+                        <h2>📅 Optimized Schedule</h2>
+                    </div>
+                    <div class="panel-content">
+                        <div id="scheduleList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="pulse-line"></div>
+            <p>⚡ Powered by Los Pythones | Minimizing downtime, maximizing efficiency</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="loading-text">CALCULATING OPTIMAL SCHEDULE...</div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot Button -->
+    <button class="chat-fab" id="chatFab" title="AI Recommendations">
+        <span class="chat-icon">🤖</span>
+    </button>
+
+    <!-- AI Chatbot Modal -->
+    <div class="modal-overlay" id="chatModal">
+        <div class="modal-content chat-modal-content">
+            <div class="modal-header">
+                <h2>⚡ AI Patch Advisor</h2>
+                <button class="modal-close" id="closeChatModal">×</button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message bot-message">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <p>Hi! I'm your ML-powered Patch Advisor using <strong>Random Forest Regression</strong> trained on your network data!</p>
+                            <p><strong>I can help you with:</strong></p>
+                            <ul>
+                                <li>🔮 <strong>Predict</strong> network loads for any day/hour</li>
+                                <li>⚡ Find <strong>optimal patch windows</strong></li>
+                                <li>📊 Analyze <strong>crew availability</strong></li>
+                                <li>🎯 <strong>Prioritize</strong> patches intelligently</li>
+                            </ul>
+                            <p><strong>Try asking:</strong></p>
+                            <ul>
+                                <li>"What's the best time to patch?"</li>
+                                <li>"Predict network loads for this week"</li>
+                                <li>"How does the model work?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Ask for recommendations..." />
+                    <button class="chat-send-btn" id="chatSendBtn">
+                        <span>⚡</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patch Details Modal -->
+    <div class="modal-overlay" id="patchModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚡ Patch Details</h2>
+                <button class="modal-close" id="closeModal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="patchForm">
+                    <div class="form-group">
+                        <label for="patchName">Patch Name</label>
+                        <input type="text" id="patchName" class="form-input" placeholder="e.g., Database Migration" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="patchDuration">Duration (hours)</label>
+                            <input type="number" id="patchDuration" class="form-input" step="0.5" min="0.5" placeholder="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="patchPriority">Priority (1-5)</label>
+                            <input type="number" id="patchPriority" class="form-input" min="1" max="5" placeholder="3" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="patchMinCrew">Minimum Crew Required</label>
+                        <input type="number" id="patchMinCrew" class="form-input" min="1" placeholder="2" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="patchNotes">Notes / Description</label>
+                        <textarea id="patchNotes" class="form-textarea" rows="4" placeholder="Add any additional notes about this patch..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="patchUrgent" class="form-checkbox">
+                            <span style="margin-left: 8px;">Mark as Urgent</span>
+                        </label>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Details</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
