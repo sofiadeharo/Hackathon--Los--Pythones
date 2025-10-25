@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Optimal Scheduling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #22c55e;
+        --danger: #ef4444;
+        --input: #1f2937;
+        --chip: #374151;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1200px 600px at 70% -20%, #22c55e15, transparent), var(--bg);
+        color: var(--text);
+      }
+      header { padding: 24px; text-align: center; }
+      header h1 { margin: 0; font-size: 24px; }
+      .container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .card { background: var(--panel); border: 1px solid #1f2937; border-radius: 12px; padding: 16px; }
+      .card h2 { margin: 0 0 12px 0; font-size: 16px; }
+      textarea, input[type="number"] { width: 100%; background: var(--input); color: var(--text); border: 1px solid #374151; border-radius: 8px; padding: 10px; }
+      textarea { min-height: 90px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+      button { background: var(--accent); color: black; border: none; padding: 10px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+      button.secondary { background: #2563eb; color: white; }
+      button.ghost { background: transparent; color: var(--text); border: 1px solid #334155; }
+      .error { color: var(--danger); font-size: 13px; min-height: 20px; }
+      .result { margin-top: 12px; padding: 12px; border-radius: 10px; background: #064e3b; border: 1px solid #115e59; }
+      .contribs { overflow: auto; max-height: 360px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid #1f2937; padding: 6px 8px; text-align: right; }
+      th { position: sticky; top: 0; background: #0b1220; text-align: right; }
+      th:first-child, td:first-child { text-align: left; }
+      .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+      .chip { background: var(--chip); border: 1px solid #4b5563; padding: 4px 8px; border-radius: 999px; font-size: 12px; }
+      .footer { margin-top: 24px; text-align: center; color: var(--muted); font-size: 12px; }
+      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Optimal Scheduling</h1>
+      <div class="chips">
+        <span class="chip">Crew availability ↑ better</span>
+        <span class="chip">Network load ↓ better</span>
+        <span class="chip">Window supports fractional hours</span>
+      </div>
+    </header>
+    <div class="container">
+      <div class="grid">
+        <div class="card">
+          <h2>Inputs</h2>
+          <div class="row">
+            <div>
+              <label>Crew availability (24 numbers)</label>
+              <textarea id="crew" placeholder="e.g. 8,8,7,6,6,5,5,6,7,8,10,12,12,12,11,10,9,9,9,10,10,9,9,8"></textarea>
+            </div>
+            <div>
+              <label>Network load (24 numbers)</label>
+              <textarea id="load" placeholder="e.g. 8,7,6,5,5,5,6,7,8,10,12,14,14,13,12,11,10,9,8,7,6,6,7,8"></textarea>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Patch duration (hours)</label>
+              <input id="duration" type="number" step="0.25" min="0.25" max="24" value="2.5" />
+            </div>
+            <div>
+              <label>Crew required (optional)</label>
+              <input id="crewRequired" type="number" step="0.25" min="0" placeholder="e.g. 6" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Weights: crew</label>
+              <input id="wCrew" type="number" step="0.1" min="0" value="1" />
+            </div>
+            <div>
+              <label>Weights: load</label>
+              <input id="wLoad" type="number" step="0.1" min="0" value="1" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>
+                <input id="normalize" type="checkbox" checked /> Normalize inputs
+              </label>
+            </div>
+            <div class="actions">
+              <button class="ghost" id="fillSample">Fill sample</button>
+              <button class="secondary" id="compute">Compute optimal hour</button>
+            </div>
+          </div>
+          <div class="error" id="error"></div>
+        </div>
+        <div class="card">
+          <h2>Result</h2>
+          <div class="result" id="result" style="display:none"></div>
+          <div class="contribs" id="contribs" style="display:none"></div>
+        </div>
+      </div>
+      <div class="footer">Built with FastAPI. All values are local to your browser.</div>
+    </div>
+
+    <script>
+      function parseSeries(text) {
+        if (!text.trim()) return null;
+        return text
+          .split(/\s*,\s*|\s+/)
+          .filter(Boolean)
+          .map(Number);
+      }
+
+      function el(id) { return document.getElementById(id); }
+
+      function renderContribs(contribs) {
+        let html = '<table>' +
+          '<thead><tr><th>Hour</th><th>Weight</th><th>Crew</th><th>Load</th><th>Crew norm</th><th>Load norm</th><th>+Crew</th><th>-Load</th></tr></thead>' +
+          '<tbody>';
+        for (const c of contribs) {
+          html += `<tr>
+            <td>${c.hour.toString().padStart(2,'0')}:00</td>
+            <td>${c.weight.toFixed(2)}</td>
+            <td>${c.crew.toFixed(2)}</td>
+            <td>${c.load.toFixed(2)}</td>
+            <td>${c.crew_norm.toFixed(2)}</td>
+            <td>${c.load_norm.toFixed(2)}</td>
+            <td>${c.crew_contribution.toFixed(3)}</td>
+            <td>${c.load_contribution.toFixed(3)}</td>
+          </tr>`;
+        }
+        html += '</tbody></table>';
+        return html;
+      }
+
+      async function fillSample() {
+        el('error').textContent = '';
+        try {
+          const res = await fetch('/api/sample');
+          const data = await res.json();
+          el('crew').value = data.crew_availability.join(',');
+          el('load').value = data.network_load.join(',');
+          el('duration').value = data.patch_duration_hours;
+          el('wCrew').value = data.weights.crew;
+          el('wLoad').value = data.weights.load;
+          el('normalize').checked = !!data.normalize;
+          el('crewRequired').value = data.crew_required ?? '';
+        } catch (e) {
+          el('error').textContent = 'Failed to load sample.';
+        }
+      }
+
+      async function compute() {
+        el('error').textContent = '';
+        el('result').style.display = 'none';
+        el('contribs').style.display = 'none';
+
+        const crew = parseSeries(el('crew').value);
+        const load = parseSeries(el('load').value);
+        const duration = Number(el('duration').value);
+        const crewRequiredRaw = el('crewRequired').value;
+        const crewRequired = crewRequiredRaw === '' ? null : Number(crewRequiredRaw);
+        const weights = { crew: Number(el('wCrew').value), load: Number(el('wLoad').value) };
+        const normalize = el('normalize').checked;
+
+        if (!crew || !load) { el('error').textContent = 'Enter both crew and load series.'; return; }
+        if (crew.length !== 24 || load.length !== 24) { el('error').textContent = 'Series must each have 24 numbers.'; return; }
+
+        const payload = { crew_availability: crew, network_load: load, patch_duration_hours: duration, weights, crew_required: crewRequired, normalize };
+
+        try {
+          const res = await fetch('/api/optimal-schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Request failed');
+          }
+          const data = await res.json();
+          el('result').style.display = 'block';
+          el('result').innerHTML = `<strong>Best start hour:</strong> ${String(data.best_start_hour).padStart(2,'0')}:00 &middot; <strong>Score:</strong> ${data.score.toFixed(3)}`;
+          el('contribs').style.display = 'block';
+          el('contribs').innerHTML = renderContribs(data.contributions);
+        } catch (e) {
+          el('error').textContent = e.message;
+        }
+      }
+
+      el('fillSample').addEventListener('click', fillSample);
+      el('compute').addEventListener('click', compute);
+      fillSample();
+    </script>
+  </body>
+</html>
