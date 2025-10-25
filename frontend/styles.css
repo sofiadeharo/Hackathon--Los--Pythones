@@ -497,7 +497,6 @@ body {
 }
 
 .btn-optimize {
-    position: relative;
     padding: 14px 36px;
     font-size: 15px;
     font-weight: 600;
@@ -519,21 +518,6 @@ body {
 
 .btn-optimize:active {
     transform: scale(0.98);
-}
-
-.btn-glow {
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: btn-shine 2s infinite;
-}
-
-@keyframes btn-shine {
-    0% { left: -100%; }
-    50%, 100% { left: 100%; }
 }
 
 /* Add Patch Button */
