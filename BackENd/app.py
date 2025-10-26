@@ -8,6 +8,12 @@ from models import NetworkLoad, CrewMember, Patch
 from ml_predictor import predictor
 from supabase_client import supabase_fetcher
 from openai import OpenAI
+from patch_classifier import patch_classifier
+from network_load_predictor import network_load_predictor
+from ml_optimizer import ml_optimizer
+from multi_strategy_scheduler import multi_strategy_scheduler
+from mock_scheduler import mock_scheduler
+from ml_cache import ml_cache
 
 # Configure Flask to serve frontend files
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
@@ -157,6 +163,9 @@ def handle_patches():
             custom_patches.append(new_patch)
             next_patch_id += 1
             
+            # Clear ML cache when patches change
+            ml_cache.clear_cache()
+            
             print(f"New patch created: {new_patch.name} (ID: {new_patch.id})")
             
             return jsonify({
@@ -172,23 +181,24 @@ def handle_patches():
 
 @app.route('/api/optimize-schedule', methods=['POST'])
 def optimize_schedule():
-    """Calculate optimal patch schedule"""
+    """Calculate optimal patch schedule using ML-powered Mock Scheduler"""
     global custom_patches
     try:
-        # Get data from Supabase
-        network_loads = supabase_fetcher.fetch_network_loads()
-        crew = supabase_fetcher.fetch_crew_members()
-        patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
+        # Get patches (use custom + fallback patches)
+        patches = supabase_fetcher.fetch_patches() + custom_patches
         
-        # Run optimization
-        schedule = scheduler.optimize(network_loads, crew, patches)
+        # Use mock scheduler with Random Forest predictions
+        schedule = mock_scheduler.generate_mock_schedule(patches)
         
         return jsonify({
             'success': True,
             'schedule': schedule,
-            'message': 'Schedule optimized successfully'
+            'message': 'Schedule optimized successfully with ML predictions'
         })
     except Exception as e:
+        print(f"Optimization error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -218,7 +228,8 @@ def get_stats():
     crew = supabase_fetcher.fetch_crew_members()
     patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
     
-    avg_load = sum(load.load_kilowatts for load in network_loads) / len(network_loads)
+    # Handle empty data gracefully
+    avg_load = sum(load.load_kilowatts for load in network_loads) / len(network_loads) if network_loads else 0
     
     # Get the 5 hours with lowest network load
     sorted_loads = sorted(network_loads, key=lambda x: x.load_kilowatts)
@@ -279,8 +290,70 @@ def chat():
         patches_summary = [f"{p.name} (Duration: {p.duration}h, Priority: {p.priority}/5, Min Crew: {p.min_crew})" 
                           for p in patches]
         
+        # Get CACHED ML predictions (much faster!)
+        ml_context_parts = []
+        try:
+            # Get cached predictions (recalculates every 5 min if needed)
+            predictions = ml_cache.get_cached_predictions(patches, crew, avg_load)
+            
+            # 1. Optimal time windows
+            ml_context_parts.append("\n**🕐 OPTIMAL TIME WINDOWS FOR PATCHING:**")
+            
+            if predictions.get('excellent'):
+                ml_context_parts.append("\n  **EXCELLENT WINDOWS (Load <20 kW):**")
+                for time_slot in predictions['excellent']:
+                    ml_context_parts.append(f"    ✅ {time_slot['time_display']} - {time_slot['predicted_load_kw']:.1f} kW")
+            
+            if predictions.get('good'):
+                ml_context_parts.append("\n  **GOOD WINDOWS (Load 20-30 kW):**")
+                for time_slot in predictions['good']:
+                    ml_context_parts.append(f"    ✔️ {time_slot['time_display']} - {time_slot['predicted_load_kw']:.1f} kW")
+            
+            if predictions.get('fair'):
+                ml_context_parts.append("\n  **FAIR WINDOWS (Load 30-40 kW):**")
+                for time_slot in predictions['fair']:
+                    ml_context_parts.append(f"    ⚠️ {time_slot['time_display']} - {time_slot['predicted_load_kw']:.1f} kW")
+            
+            # 2. Patch-specific windows (from cache)
+            if predictions.get('patch_windows'):
+                ml_context_parts.append("\n**🎯 PATCH-SPECIFIC TIME WINDOW RECOMMENDATIONS:**")
+                for patch_name, windows in list(predictions['patch_windows'].items())[:3]:  # Top 3
+                    patch = next((p for p in patches if p.name == patch_name), None)
+                    if patch:
+                        ml_context_parts.append(f"\n  **{patch.name}** (Priority: {patch.priority}/5, Duration: {patch.duration}h):")
+                        for i, window in enumerate(windows[:3], 1):
+                            classification = window.get('patch_type', 'Manual')
+                            ml_context_parts.append(f"    {i}. {window['time_display']} - Score: {window['score']}/100, Load: {window['predicted_load_kw']:.1f} kW [{classification}]")
+            
+            # 3. Patch classifications (from cache)
+            if predictions.get('classifications'):
+                ml_context_parts.append("\n**🤖 ML PATCH CLASSIFICATIONS:**")
+                for patch_name, classification in list(predictions['classifications'].items())[:5]:
+                    ml_context_parts.append(f"  - {patch_name}: {classification['type']} ({classification['confidence']:.1f}% confidence) - {classification['reason']}")
+            
+            # 4. Strategy tips
+            ml_context_parts.append("\n**💡 SCHEDULING STRATEGY TIPS:**")
+            ml_context_parts.append("  • Weekend nights (Sat/Sun 0-6am) typically have lowest load")
+            ml_context_parts.append("  • Avoid weekday business hours (Mon-Fri 9am-5pm)")
+            ml_context_parts.append("  • Emergency patches: Schedule ASAP regardless of load")
+            ml_context_parts.append("  • Manual patches: Use optimal windows with skilled crew")
+            ml_context_parts.append("  • Automated patches: Any low-load window works")
+            
+        except Exception as ml_error:
+            print(f"ML prediction error in chat: {ml_error}")
+            import traceback
+            traceback.print_exc()
+            ml_context_parts = ["\n**ML predictions temporarily unavailable**"]
+        
+        ml_context = chr(10).join(ml_context_parts) if ml_context_parts else ""
+        
         # Build context string
-        context = f"""You are an AI assistant for the Electro-call patch scheduling system. You have access to real-time data:
+        context = f"""You are an AI assistant for the Electro-call patch scheduling system. You have access to real-time data AND THREE trained ML models:
+
+**ML Models Available:**
+1. Random Forest Regressor - network load pattern analysis
+2. Random Forest Classifier - patch emergency classification (Emergency/Manual/Automated)
+3. Linear Regression - precise network load predictions
 
 **Network Load Data (Weekly - measured in kilowatts):**
 - Average load across week: {avg_load:.2f} kW
@@ -295,15 +368,35 @@ Total crew members: {len(crew)}
 **Pending Patches:**
 {chr(10).join([f"  - {s}" for s in patches_summary])}
 Total patches: {len(patches)}
+{ml_context}
 
 Your role is to:
-1. Analyze network load patterns to recommend optimal maintenance windows
-2. Consider crew availability and skill levels for patch assignments
-3. Prioritize patches based on their priority level and duration
-4. Provide clear, actionable scheduling recommendations
-5. Explain your reasoning based on the data
+1. **Provide SPECIFIC TIME WINDOWS** - Always recommend exact days and times (e.g., "Saturday 2:00 AM - 4:00 AM")
+2. Analyze network load patterns using ML predictions to find optimal maintenance windows
+3. Consider ML patch classifications (Emergency/Manual/Automated) when prioritizing
+4. Factor in crew availability and skill levels for patch assignments
+5. Provide clear, actionable scheduling recommendations backed by ML insights
+6. Explain your reasoning based on real-time data AND ML model predictions
 
-Always base your recommendations on minimizing network load impact and ensuring proper crew availability."""
+**IMPORTANT - Always recommend specific time windows:**
+- Format: "DAY, START_TIME - END_TIME (Network Load: X kW, Score: Y/100)"
+- Example: "Saturday, 02:00 - 04:00 (Network Load: 15 kW, Score: 95/100)"
+- Provide 2-3 alternative windows if the user asks
+- Explain WHY each window is good (low load, off-peak, weekend, etc.)
+
+Always base your recommendations on:
+- ML-predicted optimal time windows (shown above)
+- ML-classified patch emergency status
+- Patch-specific time recommendations (shown above)
+- Crew availability and skills
+- Minimizing network load impact
+
+When answering questions about scheduling:
+1. Look at the "OPTIMAL TIME WINDOWS" section above
+2. Look at "PATCH-SPECIFIC TIME WINDOW RECOMMENDATIONS" for that specific patch
+3. Recommend the best 1-3 time windows with specific days/times
+4. Explain the score and network load for each window
+5. Mention any relevant ML classifications or strategy tips"""
 
         # Call OpenAI API
         if openai_client:
@@ -314,8 +407,8 @@ Always base your recommendations on minimizing network load impact and ensuring 
                         {"role": "system", "content": context},
                         {"role": "user", "content": user_message}
                     ],
-                    temperature=0.7,
-                    max_tokens=500
+                    temperature=0.5,  # Lower = faster, more focused
+                    max_tokens=600    # Reduced for faster responses while still detailed
                 )
                 
                 response_text = response.choices[0].message.content
@@ -371,13 +464,381 @@ def get_ml_stats():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/classify-patch', methods=['POST'])
+def classify_patch():
+    """Classify a patch as Emergency, Manual, or Automated using ML"""
+    try:
+        data = request.json
+        
+        # Get patch details
+        patch_id = data.get('patch_id')
+        network_load = data.get('network_load', 40.0)  # Default average load
+        crew_available = data.get('crew_available', 3)
+        hour = data.get('hour', 2)  # Default to 2 AM
+        
+        # Get the patch
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        patch = next((p for p in patches if p.id == patch_id), None)
+        
+        if not patch:
+            return jsonify({'success': False, 'error': 'Patch not found'}), 404
+        
+        # Classify the patch
+        result = patch_classifier.predict(patch, network_load, crew_available, hour)
+        
+        return jsonify({
+            'success': True,
+            'patch_id': patch_id,
+            'patch_name': patch.name,
+            'classification': result
+        })
+        
+    except Exception as e:
+        print(f"Classification error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/classify-all-patches', methods=['GET'])
+def classify_all_patches():
+    """Classify all patches and return emergency status predictions"""
+    try:
+        # Get data
+        network_loads = supabase_fetcher.fetch_network_loads()
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        
+        # Calculate average network load
+        avg_load = sum(l.load_kilowatts for l in network_loads) / len(network_loads) if network_loads else 40.0
+        
+        # Classify each patch
+        classifications = []
+        for patch in patches:
+            # Use optimal low-load hour (e.g., 2 AM)
+            result = patch_classifier.predict(patch, avg_load, len(crew), hour=2)
+            classifications.append({
+                'patch_id': patch.id,
+                'patch_name': patch.name,
+                'patch_priority': patch.priority,
+                'predicted_type': result['patch_type'],
+                'confidence': result['confidence'],
+                'probabilities': result['probabilities'],
+                'recommended_priority': result['recommended_priority'],
+                'reasoning': result['reasoning']
+            })
+        
+        return jsonify({
+            'success': True,
+            'total_patches': len(patches),
+            'classifications': classifications,
+            'model_stats': patch_classifier.get_model_stats()
+        })
+        
+    except Exception as e:
+        print(f"Bulk classification error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/predict-load', methods=['POST'])
+def predict_load():
+    """Predict network load for a specific day and time using Linear Regression"""
+    try:
+        data = request.json
+        day = data.get('day', 'Monday')  # Day name or number (0-6)
+        hour = data.get('hour', 2)
+        minute = data.get('minute', 0)
+        
+        # Predict load
+        predicted_load = network_load_predictor.predict(day, hour, minute)
+        
+        return jsonify({
+            'success': True,
+            'day': day,
+            'hour': hour,
+            'minute': minute,
+            'predicted_load_kw': predicted_load,
+            'model_type': 'Linear Regression'
+        })
+        
+    except Exception as e:
+        print(f"Load prediction error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/predict-week-load', methods=['GET'])
+def predict_week_load():
+    """Predict network load for the entire week using Linear Regression"""
+    try:
+        week_predictions = network_load_predictor.predict_week()
+        
+        return jsonify({
+            'success': True,
+            'total_predictions': len(week_predictions),
+            'predictions': week_predictions,
+            'model_stats': network_load_predictor.get_model_stats()
+        })
+        
+    except Exception as e:
+        print(f"Week prediction error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/optimal-patch-times', methods=['GET'])
+def get_optimal_patch_times():
+    """Get optimal patch times based on predicted network load"""
+    try:
+        duration = request.args.get('duration', default=2, type=int)
+        top_n = request.args.get('top_n', default=5, type=int)
+        
+        optimal_times = network_load_predictor.find_optimal_patch_times(
+            duration_hours=duration, 
+            top_n=top_n
+        )
+        
+        return jsonify({
+            'success': True,
+            'duration_hours': duration,
+            'optimal_times': optimal_times,
+            'model_stats': network_load_predictor.get_model_stats()
+        })
+        
+    except Exception as e:
+        print(f"Optimal times error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/all-ml-models', methods=['GET'])
+def get_all_ml_models():
+    """Get statistics from all ML models"""
+    try:
+        return jsonify({
+            'success': True,
+            'models': {
+                'random_forest_predictor': predictor.get_model_stats(),
+                'patch_classifier': patch_classifier.get_model_stats(),
+                'linear_regression_predictor': network_load_predictor.get_model_stats()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Model stats error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/ml-optimize-patch', methods=['POST'])
+def ml_optimize_patch():
+    """Get ML-powered optimization for a single patch"""
+    try:
+        data = request.json
+        patch_id = data.get('patch_id')
+        day = data.get('day')  # Optional - if not provided, find optimal
+        hour = data.get('hour')  # Optional - if not provided, find optimal
+        
+        # Get data
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        patch = next((p for p in patches if p.id == patch_id), None)
+        
+        if not patch:
+            return jsonify({'success': False, 'error': 'Patch not found'}), 404
+        
+        # Get comprehensive recommendation
+        recommendation = ml_optimizer.get_comprehensive_recommendation(patch, crew, day, hour)
+        
+        return jsonify({
+            'success': True,
+            'recommendation': recommendation
+        })
+        
+    except Exception as e:
+        print(f"ML optimization error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/ml-optimize-all', methods=['GET'])
+def ml_optimize_all():
+    """Get ML-powered optimization for all patches"""
+    try:
+        # Get data
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        
+        # Optimize all patches
+        result = ml_optimizer.optimize_all_patches(patches, crew)
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+        
+    except Exception as e:
+        print(f"ML bulk optimization error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/optimal-hours-for-patch', methods=['POST'])
+def get_optimal_hours_for_patch():
+    """Get optimal hours for scheduling a specific patch"""
+    try:
+        data = request.json
+        patch_id = data.get('patch_id')
+        top_n = data.get('top_n', 5)
+        
+        # Get data
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        patch = next((p for p in patches if p.id == patch_id), None)
+        
+        if not patch:
+            return jsonify({'success': False, 'error': 'Patch not found'}), 404
+        
+        # Find optimal hours
+        optimal_hours = ml_optimizer.find_optimal_hours_for_patch(patch, len(crew), top_n)
+        
+        return jsonify({
+            'success': True,
+            'patch_id': patch_id,
+            'patch_name': patch.name,
+            'optimal_hours': optimal_hours
+        })
+        
+    except Exception as e:
+        print(f"Optimal hours error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/score-at-time', methods=['POST'])
+def get_score_at_time():
+    """Get the score for scheduling a patch at a specific time"""
+    try:
+        data = request.json
+        patch_id = data.get('patch_id')
+        day = data.get('day', 'Monday')
+        hour = data.get('hour', 2)
+        
+        # Get data
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        patch = next((p for p in patches if p.id == patch_id), None)
+        
+        if not patch:
+            return jsonify({'success': False, 'error': 'Patch not found'}), 404
+        
+        # Get score at time
+        score_info = ml_optimizer.get_score_at_time(patch, crew, day, hour)
+        
+        return jsonify({
+            'success': True,
+            'patch_id': patch_id,
+            'patch_name': patch.name,
+            **score_info
+        })
+        
+    except Exception as e:
+        print(f"Score calculation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recommend-crew', methods=['POST'])
+def recommend_crew():
+    """Get crew recommendation for a patch at a specific time"""
+    try:
+        data = request.json
+        patch_id = data.get('patch_id')
+        hour = data.get('hour', 2)
+        network_load = data.get('network_load', 40.0)
+        
+        # Get data
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        patch = next((p for p in patches if p.id == patch_id), None)
+        
+        if not patch:
+            return jsonify({'success': False, 'error': 'Patch not found'}), 404
+        
+        # Get crew recommendation
+        crew_rec = ml_optimizer.recommend_crew_for_patch(patch, crew, hour, network_load)
+        
+        return jsonify({
+            'success': True,
+            'patch_id': patch_id,
+            'patch_name': patch.name,
+            'hour': hour,
+            **crew_rec
+        })
+        
+    except Exception as e:
+        print(f"Crew recommendation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/multi-strategy-schedule', methods=['POST'])
+def multi_strategy_schedule():
+    """
+    Get multiple scheduling strategies based on different priorities
+    Returns 3 options: Network-Optimized, Urgency-First, and Balanced
+    """
+    try:
+        # Get data
+        network_loads = supabase_fetcher.fetch_network_loads()
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        
+        # Generate multiple strategies
+        strategies = multi_strategy_scheduler.generate_multiple_schedules(patches, crew, network_loads)
+        
+        return jsonify({
+            'success': True,
+            'strategies': strategies,
+            'total_patches': len(patches),
+            'crew_available': len(crew)
+        })
+        
+    except Exception as e:
+        print(f"Multi-strategy scheduling error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/alternative-times', methods=['POST'])
+def get_alternative_times():
+    """Get alternative scheduling times for a specific patch"""
+    try:
+        data = request.json
+        patch_id = data.get('patch_id')
+        top_n = data.get('top_n', 5)
+        
+        # Get data
+        network_loads = supabase_fetcher.fetch_network_loads()
+        crew = supabase_fetcher.fetch_crew_members()
+        patches = supabase_fetcher.fetch_patches() + custom_patches
+        patch = next((p for p in patches if p.id == patch_id), None)
+        
+        if not patch:
+            return jsonify({'success': False, 'error': 'Patch not found'}), 404
+        
+        # Get alternative times
+        alternatives = multi_strategy_scheduler.get_alternative_times_for_patch(
+            patch, crew, network_loads, top_n
+        )
+        
+        return jsonify({
+            'success': True,
+            'patch_id': patch_id,
+            'patch_name': patch.name,
+            'alternatives': alternatives
+        })
+        
+    except Exception as e:
+        print(f"Alternative times error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
-    # Train ML model on startup with data from Supabase
+    # Train ML models on startup
     print("Initializing ML-powered patch advisor...")
+    
+    # 1. Train Random Forest Network Load Predictor
     initial_loads = supabase_fetcher.fetch_network_loads()
     predictor.train(initial_loads)
-    print(f"Model trained successfully on {len(initial_loads)} data points")
-    print(f"Model stats: {predictor.get_model_stats()}")
+    print(f"Random Forest Predictor trained on {len(initial_loads)} data points")
+    print(f"RF Predictor stats: {predictor.get_model_stats()}")
+    
+    # 2. Train Patch Emergency Classifier
+    patch_classifier.train(n_samples=1000)
+    print(f"Patch Classifier stats: {patch_classifier.get_model_stats()}")
+    
+    # 3. Train Linear Regression Network Load Predictor
+    network_load_predictor.train(n_samples=1000)
+    print(f"Linear Regression Predictor stats: {network_load_predictor.get_model_stats()}")
+    
+    print("\n=== All ML Models Ready ===")
+    print("Server starting on http://127.0.0.1:8000")
     
     app.run(debug=True, port=8000)
 

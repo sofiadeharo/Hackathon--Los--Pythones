@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Optimizer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .recommendation {
+            background: #16213e;
+            border-left: 4px solid #ff6b6b;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .score {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+        .time {
+            font-size: 24px;
+            color: #4ecdc4;
+            margin: 10px 0;
+        }
+        .classification {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: #ff6b6b;
+            color: white;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .classification.automated { background: #4ecdc4; }
+        .classification.manual { background: #ffd93d; color: #333; }
+        .classification.emergency { background: #ff6b6b; }
+        .crew {
+            background: #0f3460;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .loading {
+            text-align: center;
+            font-size: 20px;
+            color: #4ecdc4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 ML-Powered Patch Optimizer</h1>
+        <p>Comprehensive recommendations using 3 ML models</p>
+        <button onclick="optimizeAll()">Optimize All Patches</button>
+        <button onclick="testSpecificTime()">Test Specific Time</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        async function optimizeAll() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="loading">Optimizing all patches...</div>';
+
+            try {
+                const response = await fetch(`${API_URL}/ml-optimize-all`);
+                const data = await response.json();
+
+                let html = `<h2>Optimization Results (${data.total_patches} patches)</h2>`;
+                html += `<p style="color: #4ecdc4;">Models used: ${data.ml_models_used.join(', ')}</p>`;
+
+                data.recommendations.forEach((rec, index) => {
+                    html += `
+                        <div class="recommendation">
+                            <h3>${index + 1}. ${rec.patch_name}</h3>
+                            <div class="score">${rec.overall_score}/100</div>
+                            <div class="time">⏰ ${rec.optimal_time.time_display}</div>
+                            <p><strong>Network Load:</strong> ${rec.optimal_time.predicted_load_kw} kW</p>
+                            <p><strong>Score Breakdown:</strong> ${rec.optimal_time.score}/100</p>
+                            
+                            <div>
+                                <span class="classification ${rec.ml_classification.type.toLowerCase()}">
+                                    ${rec.ml_classification.type} (${rec.ml_classification.confidence}% confidence)
+                                </span>
+                            </div>
+
+                            <div class="crew">
+                                <strong>Crew Recommendation:</strong><br>
+                                Needed: ${rec.crew_recommendation.crew_needed} | 
+                                Available: ${rec.crew_recommendation.crew_available} | 
+                                Score: ${rec.crew_recommendation.crew_score}/100<br>
+                                ${rec.crew_recommendation.sufficient ? '✅ Sufficient crew' : '⚠️ Insufficient crew'}
+                            </div>
+
+                            <details>
+                                <summary>Show Alternative Times</summary>
+                                <ul>
+                                    ${rec.alternative_times.slice(0, 3).map(alt => 
+                                        `<li>${alt.time_display} - Score: ${alt.score}, Load: ${alt.predicted_load_kw} kW</li>`
+                                    ).join('')}
+                                </ul>
+                            </details>
+
+                            <details>
+                                <summary>ML Reasoning</summary>
+                                <ul>
+                                    ${rec.ml_classification.reasoning.map(r => `<li>${r}</li>`).join('')}
+                                </ul>
+                            </details>
+                        </div>
+                    `;
+                });
+
+                results.innerHTML = html;
+            } catch (error) {
+                results.innerHTML = `<div class="recommendation">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testSpecificTime() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="loading">Testing specific times...</div>';
+
+            const tests = [
+                { day: 'Monday', hour: 2, label: 'Night' },
+                { day: 'Monday', hour: 14, label: 'Business Hours' },
+                { day: 'Saturday', hour: 0, label: 'Weekend Night' }
+            ];
+
+            let html = '<h2>Score Comparison for Different Times</h2>';
+
+            for (const test of tests) {
+                try {
+                    const response = await fetch(`${API_URL}/score-at-time`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patch_id: 1, day: test.day, hour: test.hour })
+                    });
+                    const data = await response.json();
+
+                    html += `
+                        <div class="recommendation">
+                            <h3>${test.day} ${test.hour}:00 (${test.label})</h3>
+                            <div class="score">${data.score}/100</div>
+                            <p><strong>Network Load:</strong> ${data.predicted_load_kw} kW</p>
+                            <p><strong>Classification:</strong> ${data.patch_type} (${data.confidence}% confidence)</p>
+                            <p><strong>Recommendation:</strong> ${data.recommendation}</p>
+                            <p><strong>Overall Score:</strong> ${data.overall_score}/100</p>
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `<div class="recommendation">Error testing ${test.day} ${test.hour}:00</div>`;
+                }
+            }
+
+            results.innerHTML = html;
+        }
+
+        // Auto-load on page load
+        window.onload = () => optimizeAll();
+    </script>
+</body>
+</html>
+

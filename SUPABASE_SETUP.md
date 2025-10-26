@@ -109,15 +109,27 @@ INSERT INTO network_loads (day_of_week, day_number, hour, load_kilowatts) VALUES
 -- (For brevity, showing pattern. In production, fill all 168 hours)
 ```
 
-#### Sample Crew Members
+#### Sample Crew Members (Expanded Availability for Better Scheduling)
 ```sql
-INSERT INTO crew_members (name, role, available_hours, skills) VALUES
-('Alex Chen', 'Senior Engineer', '[[8, 16], [18, 22]]', '["Security", "Database"]'),
-('Sarah Miller', 'Systems Admin', '[[9, 17]]', '["Networking", "Cloud"]'),
-('Mike Johnson', 'DevOps Engineer', '[[10, 18]]', '["Automation", "Security"]'),
-('Emily Davis', 'Network Specialist', '[[7, 15], [20, 23]]', '["Networking", "Monitoring"]'),
-('David Wilson', 'Security Analyst', '[[13, 21]]', '["Security", "Compliance"]');
+INSERT INTO crew_members (name, available_hours, skill_level) VALUES
+-- Night shift crew (covering 0-8)
+('Alex Chen', '[[0, 12]]', 5),
+('Sarah Miller', '[[0, 8], [20, 24]]', 4),
+
+-- Day shift crew (covering 8-16)
+('Mike Johnson', '[[6, 18]]', 5),
+('Emily Davis', '[[8, 16]]', 4),
+
+-- Evening/Night shift crew (covering 16-24)
+('David Wilson', '[[14, 24]]', 4),
+('Rachel Torres', '[[16, 24]]', 5),
+
+-- Flexible/On-call crew (24/7 availability)
+('James Park', '[[0, 24]]', 3),
+('Lisa Wong', '[[0, 24]]', 3);
 ```
+
+**Note:** With 8 crew members covering all hours, the scheduler can successfully assign patches at any time. This ensures at least 2-4 crew members are available during any hour.
 
 #### Sample Patches
 ```sql

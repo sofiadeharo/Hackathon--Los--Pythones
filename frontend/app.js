@@ -83,6 +83,18 @@ function setupEventListeners() {
             sendChatMessage();
         }
     });
+    
+    // Recommendations modal
+    const recommendationsModal = document.getElementById('recommendationsModal');
+    const closeRecommendationsModal = document.getElementById('closeRecommendationsModal');
+    closeRecommendationsModal.addEventListener('click', () => {
+        recommendationsModal.classList.remove('active');
+    });
+    recommendationsModal.addEventListener('click', (e) => {
+        if (e.target === recommendationsModal) {
+            recommendationsModal.classList.remove('active');
+        }
+    });
 }
 
 // Update day label
@@ -463,6 +475,7 @@ async function optimizeSchedule() {
         // Simulate calculation time for dramatic effect
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        // Use original scheduler
         const response = await fetch(`${API_BASE_URL}/optimize-schedule`, {
             method: 'POST',
             headers: {
@@ -474,16 +487,8 @@ async function optimizeSchedule() {
         
         if (data.success) {
             appState.schedule = data.schedule;
-            renderSchedule(data.schedule);
-            document.getElementById('schedulePanel').style.display = 'block';
-            
-            // Scroll to schedule
-            setTimeout(() => {
-                document.getElementById('schedulePanel').scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'nearest'
-                });
-            }, 500);
+            // Show recommendations modal
+            showRecommendationsModal(data.schedule);
         } else {
             throw new Error(data.error || 'Optimization failed');
         }
@@ -578,6 +583,153 @@ function formatTime(hour) {
     const h = Math.floor(hour);
     const m = Math.round((hour - h) * 60);
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+// Show recommendations modal
+function showRecommendationsModal(schedule) {
+    const modal = document.getElementById('recommendationsModal');
+    const content = document.getElementById('recommendationsContent');
+    
+    // Calculate summary statistics
+    const scheduled = schedule.filter(item => item.status === 'scheduled');
+    const unscheduled = schedule.filter(item => item.status === 'unscheduled');
+    const totalPatches = schedule.length;
+    const avgScore = scheduled.length > 0 
+        ? Math.round(scheduled.reduce((sum, item) => sum + item.score, 0) / scheduled.length)
+        : 0;
+    
+    // Build summary section
+    const successRate = totalPatches > 0 ? Math.round((scheduled.length / totalPatches) * 100) : 0;
+    
+    let html = `
+        <div class="recommendation-summary">
+            <h3>📊 Schedule Optimization Results</h3>
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <div class="summary-stat-value" style="color: var(--sunset-orange);">${scheduled.length}</div>
+                    <div class="summary-stat-label">✅ Scheduled</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" style="color: ${unscheduled.length > 0 ? 'var(--sunset-coral)' : 'var(--sunset-pink)'};">${unscheduled.length}</div>
+                    <div class="summary-stat-label">⚠️ Unscheduled</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" style="color: var(--sunset-orange);">${avgScore}</div>
+                    <div class="summary-stat-label">📈 Avg Score</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" style="color: var(--sunset-pink);">${successRate}%</div>
+                    <div class="summary-stat-label">🎯 Success Rate</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Scheduled patches section
+    if (scheduled.length > 0) {
+        html += `
+            <div class="recommendation-section">
+                <h3>✅ Recommended Schedule</h3>
+        `;
+        
+        scheduled.forEach(item => {
+            const startTime = formatTime(item.start_hour);
+            const endTime = formatTime(item.end_hour);
+            const roundedScore = Math.round(item.score);
+            const networkLoad = item.network_load || 0;
+            const dayInfo = item.day ? `${item.day}, ` : '';
+            const classification = item.classification ? `<span style="background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-pink)); padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">${item.classification}</span>` : '';
+            
+            html += `
+                <div class="recommendation-item">
+                    <div class="recommendation-item-header">
+                        <div class="recommendation-item-title">${item.patch.name} ${classification}</div>
+                        <div class="recommendation-badge">Score: ${roundedScore}/100</div>
+                    </div>
+                    <div class="recommendation-details">
+                        <div class="recommendation-detail">
+                            <strong>📅 Time:</strong> ${dayInfo}${startTime} - ${endTime}
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>⚡ Network Load:</strong> ${networkLoad} kW
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>⏱️ Duration:</strong> ${item.patch.duration}h
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>🎯 Priority:</strong> ${item.patch.priority}/5
+                        </div>
+                    </div>
+                    <div class="recommendation-details" style="margin-top: 10px;">
+                        <div class="recommendation-detail">
+                            <strong>👥 Crew:</strong> ${item.assigned_crew.join(', ')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    // Unscheduled patches section
+    if (unscheduled.length > 0) {
+        html += `
+            <div class="recommendation-section">
+                <h3>⚠️ Unable to Schedule</h3>
+        `;
+        
+        unscheduled.forEach(item => {
+            html += `
+                <div class="recommendation-item" style="border-left-color: var(--sunset-coral);">
+                    <div class="recommendation-item-header">
+                        <div class="recommendation-item-title">${item.patch.name}</div>
+                        <div class="recommendation-badge" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">UNSCHEDULED</div>
+                    </div>
+                    <div class="recommendation-details">
+                        <div class="recommendation-detail">
+                            <strong>⚠️ Reason:</strong> ${item.reason || 'No suitable time window found'}
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>⏱️ Duration:</strong> ${item.patch.duration}h
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>🎯 Priority:</strong> ${item.patch.priority}/5
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>👥 Requires:</strong> ${item.patch.min_crew} crew members
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    // No schedule message
+    if (schedule.length === 0) {
+        html = `
+            <div class="no-schedule">
+                <p style="text-align: center; font-size: 18px; color: var(--text-secondary);">
+                    No patches available to schedule.<br>
+                    <small style="font-size: 14px; color: var(--text-secondary);">Add patches using the + button to get started.</small>
+                </p>
+            </div>
+        `;
+    } else if (scheduled.length === 0) {
+        html += `
+            <div class="no-schedule">
+                <p style="text-align: center; font-size: 18px; color: var(--sunset-coral);">
+                    ⚠️ Unable to schedule any patches at this time.<br>
+                    <small style="font-size: 14px;">Please check crew availability or adjust patch requirements.</small>
+                </p>
+            </div>
+        `;
+    }
+    
+    content.innerHTML = html;
+    modal.classList.add('active');
 }
 
 // Animate stat values
@@ -705,6 +857,112 @@ function removeTypingIndicator(id) {
     if (typingDiv) {
         typingDiv.remove();
     }
+}
+
+// Show multi-strategy modal
+function showMultiStrategyModal(strategies, totalPatches) {
+    const modal = document.getElementById('recommendationsModal');
+    const content = document.getElementById('recommendationsContent');
+    
+    let html = `
+        <div class="recommendation-summary">
+            <h3>📊 Multiple Scheduling Strategies</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                Choose the strategy that best fits your needs. Total patches: ${totalPatches}
+            </p>
+        </div>
+    `;
+    
+    // Add each strategy
+    const strategyOrder = ['network_optimized', 'urgency_first', 'balanced'];
+    strategyOrder.forEach(strategyKey => {
+        const strategy = strategies[strategyKey];
+        if (!strategy) return;
+        
+        const scheduled = strategy.schedule.filter(item => item.status === 'scheduled');
+        const unscheduled = strategy.schedule.filter(item => item.status === 'unscheduled');
+        const successRate = totalPatches > 0 ? Math.round((scheduled.length / totalPatches) * 100) : 0;
+        const avgScore = scheduled.length > 0 
+            ? Math.round(scheduled.reduce((sum, item) => sum + item.score, 0) / scheduled.length)
+            : 0;
+        
+        html += `
+            <div class="recommendation-section" style="border: 2px solid var(--sunset-orange); margin: 20px 0; padding: 20px; border-radius: 10px;">
+                <h3>${strategy.icon} ${strategy.strategy}</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">${strategy.description}</p>
+                
+                <div class="summary-stats" style="margin-bottom: 20px;">
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" style="color: var(--sunset-orange);">${scheduled.length}</div>
+                        <div class="summary-stat-label">✅ Scheduled</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" style="color: var(--sunset-coral);">${unscheduled.length}</div>
+                        <div class="summary-stat-label">⚠️ Unscheduled</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" style="color: var(--sunset-pink);">${avgScore}</div>
+                        <div class="summary-stat-label">📈 Avg Score</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" style="color: var(--sunset-orange);">${successRate}%</div>
+                        <div class="summary-stat-label">🎯 Success</div>
+                    </div>
+                </div>
+                
+                <details open>
+                    <summary style="cursor: pointer; font-weight: bold; margin-bottom: 10px;">View Schedule</summary>
+        `;
+        
+        // Show scheduled patches
+        scheduled.forEach(item => {
+            const startTime = formatTime(item.start_hour);
+            const endTime = formatTime(item.end_hour);
+            const roundedScore = Math.round(item.score);
+            const networkLoad = item.network_load || 0;
+            const dayInfo = item.day ? `${item.day}, ` : '';
+            
+            html += `
+                <div class="recommendation-item" style="margin: 10px 0;">
+                    <div class="recommendation-item-header">
+                        <div class="recommendation-item-title">${item.patch.name}</div>
+                        <div class="recommendation-badge">Score: ${roundedScore}/100</div>
+                    </div>
+                    <div class="recommendation-details">
+                        <div class="recommendation-detail">
+                            <strong>🕐 Time:</strong> ${dayInfo}${startTime} - ${endTime}
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>⚡ Network Load:</strong> ${networkLoad} kW
+                        </div>
+                        <div class="recommendation-detail">
+                            <strong>👥 Crew:</strong> ${item.assigned_crew.join(', ')}
+                        </div>
+                        ${item.reason ? `<div class="recommendation-detail"><strong>💡 Reason:</strong> ${item.reason}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Show unscheduled patches
+        if (unscheduled.length > 0) {
+            html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--electric-pink);">';
+            html += '<h4 style="color: var(--sunset-coral); margin-bottom: 10px;">⚠️ Unscheduled Patches</h4>';
+            unscheduled.forEach(item => {
+                html += `
+                    <div style="background: rgba(255, 107, 107, 0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                        <strong>${item.patch.name}</strong> - ${item.reason}
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+        
+        html += '</details></div>';
+    });
+    
+    content.innerHTML = html;
+    modal.classList.add('active');
 }
 
 // Console art

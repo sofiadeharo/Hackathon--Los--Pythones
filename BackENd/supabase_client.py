@@ -51,6 +51,10 @@ class SupabaseDataFetcher:
                         load_kilowatts=row['load_kilowatts']
                     ))
                 print(f"Fetched {len(network_loads)} network load records from Supabase")
+                # If table is empty, use fallback data
+                if not network_loads:
+                    print("Supabase table is empty. Using fallback data.")
+                    return self._generate_fallback_network_loads()
                 return network_loads
             except Exception as e:
                 print(f"Error fetching network loads from Supabase: {e}")
@@ -75,6 +79,10 @@ class SupabaseDataFetcher:
                         skill_level=row.get('skill_level', 3)
                     ))
                 print(f"Fetched {len(crew_members)} crew members from Supabase")
+                # If table is empty, use fallback data
+                if not crew_members:
+                    print("Supabase crew_members table is empty. Using fallback data.")
+                    return self._generate_fallback_crew()
                 return crew_members
             except Exception as e:
                 print(f"Error fetching crew members from Supabase: {e}")
@@ -101,6 +109,10 @@ class SupabaseDataFetcher:
                         min_crew=row['min_crew']
                     ))
                 print(f"Fetched {len(patches)} patches from Supabase")
+                # If table is empty, use fallback data
+                if not patches:
+                    print("Supabase patches table is empty. Using fallback data.")
+                    return self._generate_fallback_patches()
                 return patches
             except Exception as e:
                 print(f"Error fetching patches from Supabase: {e}")
@@ -170,13 +182,23 @@ class SupabaseDataFetcher:
         return loads
     
     def _generate_fallback_crew(self) -> List[CrewMember]:
-        """Generate sample crew when Supabase is unavailable"""
+        """Generate sample crew when Supabase is unavailable - expanded availability"""
         return [
-            CrewMember(name="Alex Chen", available_hours=[(0, 8), (20, 24)], skill_level=5),
-            CrewMember(name="Sarah Miller", available_hours=[(6, 14), (22, 24)], skill_level=4),
-            CrewMember(name="Mike Johnson", available_hours=[(18, 24)], skill_level=5),
-            CrewMember(name="Emily Davis", available_hours=[(0, 6), (22, 24)], skill_level=3),
-            CrewMember(name="David Wilson", available_hours=[(1, 9), (19, 24)], skill_level=4)
+            # Night shift crew (covering 0-8)
+            CrewMember(name="Alex Chen", available_hours=[(0, 12)], skill_level=5),
+            CrewMember(name="Sarah Miller", available_hours=[(0, 8), (20, 24)], skill_level=4),
+            
+            # Day shift crew (covering 8-16)
+            CrewMember(name="Mike Johnson", available_hours=[(6, 18)], skill_level=5),
+            CrewMember(name="Emily Davis", available_hours=[(8, 16)], skill_level=4),
+            
+            # Evening/Night shift crew (covering 16-24)
+            CrewMember(name="David Wilson", available_hours=[(14, 24)], skill_level=4),
+            CrewMember(name="Rachel Torres", available_hours=[(16, 24)], skill_level=5),
+            
+            # Flexible/On-call crew (24/7 availability)
+            CrewMember(name="James Park", available_hours=[(0, 24)], skill_level=3),
+            CrewMember(name="Lisa Wong", available_hours=[(0, 24)], skill_level=3)
         ]
     
     def _generate_fallback_patches(self) -> List[Patch]:
