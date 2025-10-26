@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import random
@@ -8,7 +8,8 @@ from models import NetworkLoad, CrewMember, Patch
 from ml_predictor import predictor
 from supabase_client import supabase_fetcher
 
-app = Flask(__name__)
+# Configure Flask to serve frontend files
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
 
 # Initialize scheduler
@@ -198,7 +199,8 @@ def get_stats():
     crew = supabase_fetcher.fetch_crew_members()
     patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
     
-    avg_load = sum(load.load_kilowatts for load in network_loads) / len(network_loads)
+    # Handle empty network loads
+    avg_load = sum(load.load_kilowatts for load in network_loads) / len(network_loads) if network_loads else 0
     
     # Get the 5 hours with lowest network load
     sorted_loads = sorted(network_loads, key=lambda x: x.load_kilowatts)
@@ -342,6 +344,12 @@ def get_ml_stats():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Serve frontend
+@app.route('/')
+def serve_frontend():
+    """Serve the main HTML page"""
+    return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
     # Train ML model on startup with data from Supabase

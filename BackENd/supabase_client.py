@@ -51,6 +51,12 @@ class SupabaseDataFetcher:
                         load_kilowatts=row['load_kilowatts']
                     ))
                 print(f"Fetched {len(network_loads)} network load records from Supabase")
+                
+                # Use fallback if Supabase table is empty
+                if not network_loads:
+                    print("Supabase table is empty. Using fallback data.")
+                    return self._generate_fallback_network_loads()
+                
                 return network_loads
             except Exception as e:
                 print(f"Error fetching network loads from Supabase: {e}")
@@ -75,6 +81,12 @@ class SupabaseDataFetcher:
                         skill_level=row.get('skill_level', 3)
                     ))
                 print(f"Fetched {len(crew_members)} crew members from Supabase")
+                
+                # Use fallback if Supabase table is empty
+                if not crew_members:
+                    print("Supabase crew table is empty. Using fallback data.")
+                    return self._generate_fallback_crew()
+                
                 return crew_members
             except Exception as e:
                 print(f"Error fetching crew members from Supabase: {e}")
@@ -101,6 +113,12 @@ class SupabaseDataFetcher:
                         min_crew=row['min_crew']
                     ))
                 print(f"Fetched {len(patches)} patches from Supabase")
+                
+                # Use fallback if Supabase table is empty
+                if not patches:
+                    print("Supabase patches table is empty. Using fallback data.")
+                    return self._generate_fallback_patches()
+                
                 return patches
             except Exception as e:
                 print(f"Error fetching patches from Supabase: {e}")
