@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import random
@@ -7,8 +7,10 @@ from scheduler import PatchScheduler
 from models import NetworkLoad, CrewMember, Patch
 from ml_predictor import predictor
 from supabase_client import supabase_fetcher
+from openai import OpenAI
 
-app = Flask(__name__)
+# Configure Flask to serve frontend files
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
 
 # Initialize scheduler
@@ -17,6 +19,18 @@ scheduler = PatchScheduler()
 # Store custom patches in memory (will reset on server restart)
 custom_patches = []
 next_patch_id = 100  # Start from 100 to avoid conflicts with Supabase IDs
+
+# Initialize OpenAI client
+openai_api_key = os.environ.get('OPENAI_API_KEY')
+openai_client = None
+if openai_api_key:
+    try:
+        openai_client = OpenAI(api_key=openai_api_key)
+        print("OpenAI client initialized successfully")
+    except Exception as e:
+        print(f"Error initializing OpenAI client: {e}")
+else:
+    print("OPENAI_API_KEY not found. Chatbot will use fallback responses.")
 
 # Train ML model on startup
 print("Training ML model for network load prediction...")
@@ -74,6 +88,12 @@ def generate_sample_patches():
         Patch(id=5, name="Backup System Patch", duration=2, priority=2, min_crew=1),
     ]
     return patches
+
+# Serve frontend
+@app.route('/')
+def serve_frontend():
+    """Serve the frontend HTML"""
+    return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/api/network-load', methods=['GET'])
 def get_network_load():
@@ -232,11 +252,11 @@ def get_stats():
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """ML-powered chatbot for patch scheduling recommendations"""
+    """OpenAI-powered chatbot for patch scheduling recommendations"""
     global custom_patches
     try:
         data = request.json
-        user_message = data.get('message', '').lower()
+        user_message = data.get('message', '')
         
         if not user_message:
             return jsonify({'success': False, 'error': 'No message provided'}), 400
@@ -246,77 +266,85 @@ def chat():
         crew = supabase_fetcher.fetch_crew_members()
         patches = supabase_fetcher.fetch_patches() + custom_patches  # Include custom patches
         
-        # Ensure model is trained
-        if not predictor.is_trained:
-            predictor.train(network_loads)
+        # Prepare context data for OpenAI
+        # Network load summary
+        avg_load = sum(l.load_kilowatts for l in network_loads) / len(network_loads)
+        low_load_hours = sorted(network_loads, key=lambda x: x.load_kilowatts)[:10]
         
-        # Generate response based on question type
-        response_text = ""
+        # Crew summary
+        crew_summary = [f"{c.name} (Skill: {c.skill_level}, Available: {len(c.available_hours)} time slots)" 
+                       for c in crew]
         
-        # Check what user is asking about
-        if 'best' in user_message or 'optimal' in user_message or 'when' in user_message:
-            if any(word in user_message for word in ['time', 'hour', 'window', 'when']):
-                windows = predictor.find_optimal_windows(2, network_loads)
-                response_text = "⚡ **Optimal Maintenance Windows:**\n\n"
-                response_text += "Based on ML predictions of network load patterns:\n\n"
-                for i, window in enumerate(windows[:5], 1):
-                    response_text += f"{i}. {window['day']} {window['start_hour']}:00-{int(window['end_hour'])}:00\n"
-                    response_text += f"   • Predicted load: {window['avg_load_kw']} kW\n"
-                    response_text += f"   • Score: {window['score']}/100\n\n"
+        # Patches summary
+        patches_summary = [f"{p.name} (Duration: {p.duration}h, Priority: {p.priority}/5, Min Crew: {p.min_crew})" 
+                          for p in patches]
         
-        elif 'predict' in user_message or 'forecast' in user_message:
-            response_text = "🔮 **Network Load Predictions:**\n\n"
-            response_text += "Our ML model predicts the following load patterns:\n\n"
-            for day in ['Monday', 'Friday', 'Saturday', 'Sunday']:
-                day_num = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].index(day)
-                night_load = predictor.predict_load(day_num, 3)
-                day_load = predictor.predict_load(day_num, 14)
-                response_text += f"**{day}:**\n"
-                response_text += f"  • Night (3 AM): {night_load:.1f} kW ✅ Low\n"
-                response_text += f"  • Afternoon (2 PM): {day_load:.1f} kW ⚠️ High\n\n"
-        
-        elif 'schedule' in user_message or 'patch' in user_message:
-            # Provide patch-specific recommendations
-            response_text = predictor.get_recommendations(patches, crew, network_loads)
-        
-        elif 'crew' in user_message or 'staff' in user_message:
-            response_text = "👥 **Crew Analysis:**\n\n"
-            total_hours = sum(sum(end - start for start, end in m.available_hours) for m in crew)
-            response_text += f"• Total available crew hours: {total_hours}\n"
-            response_text += f"• Number of crew members: {len(crew)}\n"
-            response_text += f"• Average availability: {total_hours/len(crew):.1f} hours per person\n\n"
-            
-            high_skill = [c for c in crew if c.skill_level >= 4]
-            response_text += f"• High-skill crew members: {len(high_skill)}\n"
-            response_text += "• Recommendation: Assign high-skill crew to critical patches\n"
-        
-        elif 'model' in user_message or 'how' in user_message:
-            stats = predictor.get_model_stats()
-            response_text = "🤖 **ML Model Information:**\n\n"
-            response_text += f"• Model Type: {stats.get('model_type', 'Random Forest')}\n"
-            response_text += f"• Training Status: {'Trained ✅' if stats['trained'] else 'Not trained ❌'}\n"
-            response_text += f"• Estimators: {stats.get('n_estimators', 100)}\n\n"
-            
-            if 'feature_importance' in stats:
-                response_text += "**Feature Importance:**\n"
-                for feature, importance in stats['feature_importance'].items():
-                    response_text += f"  • {feature}: {importance:.2%}\n"
-        
+        # Build context string
+        context = f"""You are an AI assistant for the Electro-call patch scheduling system. You have access to real-time data:
+
+**Network Load Data (Weekly - measured in kilowatts):**
+- Average load across week: {avg_load:.2f} kW
+- Total data points: {len(network_loads)} (7 days × 24 hours)
+- Lowest load hours:
+{chr(10).join([f"  - {l.day_of_week} at {l.hour}:00 - {l.load_kilowatts} kW" for l in low_load_hours[:5]])}
+
+**Crew Availability:**
+{chr(10).join([f"  - {s}" for s in crew_summary])}
+Total crew members: {len(crew)}
+
+**Pending Patches:**
+{chr(10).join([f"  - {s}" for s in patches_summary])}
+Total patches: {len(patches)}
+
+Your role is to:
+1. Analyze network load patterns to recommend optimal maintenance windows
+2. Consider crew availability and skill levels for patch assignments
+3. Prioritize patches based on their priority level and duration
+4. Provide clear, actionable scheduling recommendations
+5. Explain your reasoning based on the data
+
+Always base your recommendations on minimizing network load impact and ensuring proper crew availability."""
+
+        # Call OpenAI API
+        if openai_client:
+            try:
+                response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": context},
+                        {"role": "user", "content": user_message}
+                    ],
+                    temperature=0.7,
+                    max_tokens=500
+                )
+                
+                response_text = response.choices[0].message.content
+                
+                return jsonify({
+                    'success': True,
+                    'message': response_text
+                })
+                
+            except Exception as e:
+                print(f"OpenAI API error: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f"OpenAI API error: {str(e)}",
+                    'fallback_message': "I'm having trouble connecting to the AI service. Please check your API key."
+                }), 500
         else:
-            # General recommendations
-            response_text = predictor.get_recommendations(patches, crew, network_loads)
-        
-        return jsonify({
-            'success': True,
-            'message': response_text
-        })
+            return jsonify({
+                'success': False,
+                'error': 'OpenAI client not initialized',
+                'fallback_message': 'AI chatbot is not configured. Please set your OPENAI_API_KEY environment variable.'
+            }), 503
         
     except Exception as e:
         print(f"Chat error: {e}")
         return jsonify({
             'success': False,
             'error': str(e),
-            'fallback_message': "I'm having trouble processing your request. Try asking: 'What's the best time to patch?' or 'Show me optimal windows'"
+            'fallback_message': "I'm having trouble processing your request. Please try again."
         }), 500
 
 @app.route('/api/ml-stats', methods=['GET'])
@@ -351,5 +379,5 @@ if __name__ == '__main__':
     print(f"Model trained successfully on {len(initial_loads)} data points")
     print(f"Model stats: {predictor.get_model_stats()}")
     
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=8000)
 

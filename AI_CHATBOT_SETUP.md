@@ -1,13 +1,14 @@
 # 🤖 AI Chatbot Setup Guide
 
 ## Overview
-The Patch Scheduler now includes an AI-powered chatbot that provides intelligent recommendations based on your real-time network data, crew availability, and patch information.
+The Electro-call app includes an **OpenAI-powered chatbot** that provides intelligent recommendations based on your **real-time network data, crew availability, and patch information** pulled directly from your Supabase database.
 
 ## Features
-- **Real-time Context**: AI knows your current network loads, patches, and crew
-- **Smart Recommendations**: Get scheduling advice based on actual data
+- **Real-time Data**: AI receives live network load (kW), crew schedules, and patch details
+- **Smart Recommendations**: Get scheduling advice based on actual data patterns
 - **Natural Conversation**: Ask questions in plain English
-- **Electrical Aesthetic**: Beautiful chat interface matching the app theme
+- **Data-Driven**: Trained with your specific network loads, patch priorities, and crew availability
+- **Sunset Aesthetic**: Beautiful chat interface matching the app theme
 
 ---
 
@@ -88,25 +89,55 @@ python app.py
 
 ## How It Works
 
-### Context Sent to AI:
-The AI receives:
-- Total patches pending
-- High priority patch count
-- Available crew members and their schedules
-- Top 5 lowest network load hours
-- Details of each patch (duration, priority, crew needs)
-- Crew availability windows and skill levels
+### Real-Time Data Integration:
+Every time you ask a question, the chatbot fetches fresh data from Supabase:
 
-### AI Model:
-- **Model:** GPT-3.5-turbo
-- **Max Response:** 500 tokens
+1. **Network Load Data (Weekly - in Kilowatts)**
+   - 168 data points (7 days × 24 hours)
+   - Average load across the entire week
+   - Top 5 lowest load hours with day and time
+   
+2. **Crew Availability**
+   - All crew members with their names
+   - Available time slots for each crew member
+   - Skill levels (1-5 rating)
+   
+3. **Pending Patches**
+   - Patch names and descriptions
+   - Duration (in hours)
+   - Priority level (1-5)
+   - Minimum crew requirements
+
+### Context Sent to AI:
+The AI receives a comprehensive system prompt with:
+```
+Network Load Data (Weekly - measured in kilowatts):
+- Average load across week: [calculated] kW
+- Total data points: 168 (7 days × 24 hours)
+- Lowest load hours:
+  - [Day] at [hour]:00 - [load] kW
+  - ...
+
+Crew Availability:
+- [Name] (Skill: [level], Available: [slots])
+- ...
+
+Pending Patches:
+- [Patch name] (Duration: [hours]h, Priority: [1-5]/5, Min Crew: [number])
+- ...
+```
+
+### AI Model Configuration:
+- **Model:** GPT-3.5-turbo (fast & cost-effective)
+- **Max Response:** 500 tokens (~375 words)
 - **Temperature:** 0.7 (balanced creativity)
+- **Role:** AI assistant trained for the Electro-call scheduling system
 
 ### Fallback Mode:
 If OpenAI is unavailable, the chatbot will:
-- Show helpful fallback messages
-- Provide general best practices
-- Still work without internet connection
+- Display a clear error message
+- Suggest checking API key configuration
+- Provide troubleshooting steps
 
 ---
 
