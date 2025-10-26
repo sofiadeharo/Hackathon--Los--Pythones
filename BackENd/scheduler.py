@@ -6,49 +6,63 @@ class PatchScheduler:
     """Optimizes patch scheduling based on network load, crew availability, and patch requirements"""
     
     def __init__(self):
-        self.network_load_weight = 0.4
-        self.crew_availability_weight = 0.3
-        self.priority_weight = 0.3
+        pass
     
     def calculate_score(self, patch: Patch, start_hour: int, network_loads: List[NetworkLoad], 
                        available_crew: List[CrewMember]) -> float:
         """Calculate a score for scheduling a patch at a specific time
         
         Higher score = better scheduling window
-        Score is based on:
-        - Lower network load (better)
-        - More available crew (better)
-        - Higher priority patches get bonus
+        Score is based on THREE key factors:
+        1. Network Load (kW at that hour) - Lower is better (40 points max)
+        2. Crew Available - More is better (30 points max)
+        3. Priority - Higher priority gets higher score (30 points max)
         """
-        # Get average network load during patch window (in kilowatts)
-        patch_duration_hours = int(math.ceil(patch.duration))
-        load_sum = 0
-        max_possible_load = 90  # Maximum expected load in kW
+        score = 0
         
-        for i in range(patch_duration_hours):
-            hour = (start_hour + i) % 24
-            load = next((l.load_kilowatts for l in network_loads if l.hour == hour), 50)
-            load_sum += load
-        avg_load = load_sum / patch_duration_hours
+        # 1. NETWORK LOAD FACTOR (40 points max)
+        # Get network load at the start hour (in kilowatts)
+        load_kw = next((l.load_kilowatts for l in network_loads if l.hour == start_hour), 50)
         
-        # Network load score (inverted - lower load is better)
-        network_score = (max_possible_load - avg_load) / max_possible_load
+        # Lower load = higher score
+        if load_kw < 20:
+            load_score = 40
+        elif load_kw < 30:
+            load_score = 30
+        elif load_kw < 40:
+            load_score = 20
+        elif load_kw < 50:
+            load_score = 10
+        else:
+            load_score = 5  # High load, not ideal
         
-        # Crew availability score
+        score += load_score
+        
+        # 2. CREW AVAILABILITY FACTOR (30 points max)
         crew_count = len(available_crew)
-        crew_score = min(crew_count / (patch.min_crew * 2), 1.0)  # Ideal is 2x minimum crew
+        crew_needed = patch.min_crew
         
-        # Priority bonus
-        priority_score = patch.priority / 5.0
+        if crew_count >= crew_needed * 2:
+            crew_score = 30  # Plenty of crew available
+        elif crew_count >= crew_needed + 2:
+            crew_score = 25  # Good crew availability
+        elif crew_count >= crew_needed + 1:
+            crew_score = 20  # Extra crew available
+        elif crew_count >= crew_needed:
+            crew_score = 15  # Just enough crew
+        else:
+            crew_score = 0   # Not enough crew
         
-        # Calculate weighted total
-        total_score = (
-            network_score * self.network_load_weight +
-            crew_score * self.crew_availability_weight +
-            priority_score * self.priority_weight
-        )
+        score += crew_score
         
-        return total_score * 100  # Scale to 0-100
+        # 3. PRIORITY FACTOR (30 points max)
+        # Higher priority = higher score
+        priority_score = (patch.priority / 5.0) * 30
+        
+        score += priority_score
+        
+        # Return score (0-100 scale)
+        return round(min(100, max(0, score)), 2)
     
     def get_available_crew_at_hour(self, hour: int, crew: List[CrewMember], 
                                    already_scheduled: Dict[int, List[str]]) -> List[CrewMember]:
