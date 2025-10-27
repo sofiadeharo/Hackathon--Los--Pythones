@@ -1,18 +1,20 @@
-# 📊 How Scores Are Calculated
+# 📊 How Scores Are Calculated (Rosy's Version)
 
 ## Overview
 
-The Electro-call scheduler uses a **multi-factor scoring system** to determine the optimal time for patches. Scores range from **0-100**, where higher is better.
+The Electro-call scheduler uses a **simplified 3-factor scoring system** to determine the optimal time for patches. Scores range from **0-100**, where higher is better.
 
 ---
 
-## 🎯 Score Components
+## 🎯 Score Components (Simple & Direct)
 
-Each scheduling time slot receives a score based on **5 key factors**:
+Each scheduling time slot receives a score based on **3 key factors**:
 
-### **1. Network Load (40% weight) - Most Important!**
+### **1. Network Load at That Hour (40 points max) - Most Important!**
 
-Lower network load = Higher score
+The network load **at the specific hour** determines the base score.
+
+**Lower kW = Higher Score**
 
 | Network Load (kW) | Points | Grade |
 |-------------------|--------|-------|
@@ -20,118 +22,76 @@ Lower network load = Higher score
 | 20-30 kW | 30 | ⭐⭐ Good |
 | 30-40 kW | 20 | ⭐ Fair |
 | 40-50 kW | 10 | ⚠️ Poor |
-| > 50 kW | 0 | ❌ Very Poor |
+| > 50 kW | 5 | ❌ Very Poor |
 
 **Why it matters:**
 - Lower load = less system impact
-- ML model predicts load for each hour
+- Uses actual load at that specific hour
 - Minimizes risk of service disruption
 
 **Example:**
 ```
 Saturday 2am: 15 kW → 40 points ✅
-Monday 2pm: 55 kW → 0 points ❌
+Monday 2pm: 55 kW → 5 points ❌
 ```
 
 ---
 
-### **2. Time of Day (20% weight)**
+### **2. Crew Available (30 points max)**
 
-Certain hours are naturally better for maintenance
+The number of available crew members at that hour affects the score.
 
-| Time Range | Points | Reason |
-|------------|--------|--------|
-| 0-6 (Night) | 20 | ⭐⭐⭐ Minimal users |
-| 22-24 (Late Night) | 18 | ⭐⭐ Very few users |
-| 6-9 (Morning) | 15 | ⭐ Ramping up |
-| 17-22 (Evening) | 12 | ⚠️ Still active |
-| 9-17 (Business) | 5 | ❌ Peak usage |
+**More Crew = Higher Score**
+
+| Crew Available | Points | Status |
+|----------------|--------|--------|
+| 2× needed or more | 30 | ⭐⭐⭐ Plenty of crew |
+| Needed + 2 | 25 | ⭐⭐ Good availability |
+| Needed + 1 | 20 | ⭐ Extra crew available |
+| Exactly needed | 15 | ⚠️ Just enough |
+| Less than needed | 0 | ❌ Cannot schedule |
 
 **Why it matters:**
-- Night hours = fewer active users
-- Business hours = maximum disruption potential
-- Off-peak = safer maintenance window
+- More crew = better flexibility
+- Extra crew = backup if issues arise
+- Just enough = risky if someone unavailable
 
 **Example:**
 ```
-Saturday 2am: 20 points (night) ✅
-Monday 2pm: 5 points (business hours) ❌
+Patch needs 2 crew:
+- 5 crew available: 30 points ✅
+- 2 crew available: 15 points ⚠️
+- 1 crew available: 0 points ❌ (cannot schedule)
 ```
 
 ---
 
-### **3. Weekend Bonus (10% weight)**
+### **3. Patch Priority (30 points max)**
 
-Weekends are inherently better for maintenance
+Higher priority patches get higher scores to ensure they get optimal time slots.
 
-| Day Type | Points | Days |
-|----------|--------|------|
-| Weekend | +10 | Saturday, Sunday ✅ |
-| Weekday | +0 | Monday-Friday |
-
-**Why it matters:**
-- Lower business impact
-- Fewer critical operations running
-- More flexibility for issues
-
-**Example:**
-```
-Saturday 2am: +10 points ✅
-Monday 2am: +0 points
-```
-
----
-
-### **4. Patch Priority (15% weight)**
-
-Higher priority patches get better time slots
+**Higher Priority = Higher Score**
 
 | Priority | Points | Type |
 |----------|--------|------|
-| 5/5 | 15 | 🚨 Critical |
-| 4/5 | 12 | ⚠️ High |
-| 3/5 | 9 | 📋 Medium |
-| 2/5 | 6 | 📝 Low |
-| 1/5 | 3 | 💤 Very Low |
+| 5/5 | 30 | 🚨 Critical |
+| 4/5 | 24 | ⚠️ High |
+| 3/5 | 18 | 📋 Medium |
+| 2/5 | 12 | 📝 Low |
+| 1/5 | 6 | 💤 Very Low |
 
-**Formula:** `(priority / 5) × 15`
+**Formula:** `(priority / 5) × 30`
 
 **Why it matters:**
-- Critical patches should get best windows
-- Lower priority can accept sub-optimal times
-- Balances urgency with optimal conditions
+- Critical patches get best time slots
+- Lower priority accepts sub-optimal times
+- Fair distribution based on urgency
 
 **Example:**
 ```
-Database Security (Priority 5): 15 points ✅
-Backup System (Priority 2): 6 points
-```
-
----
-
-### **5. Duration Factor (15% weight)**
-
-Shorter patches are easier to schedule
-
-| Duration | Points | Calculation |
-|----------|--------|-------------|
-| 0.5 hours | 13.5 | 15 - (0.5 × 3) |
-| 1 hour | 12 | 15 - (1 × 3) |
-| 2 hours | 9 | 15 - (2 × 3) |
-| 3 hours | 6 | 15 - (3 × 3) |
-| 4+ hours | 3 | 15 - (4 × 3) |
-
-**Formula:** `max(0, 15 - (duration × 3))`
-
-**Why it matters:**
-- Shorter patches = less risk
-- Easier to fit in optimal windows
-- Lower impact if issues arise
-
-**Example:**
-```
-Web Server Patch (1h): 12 points ✅
-Core Firmware (3h): 6 points
+Database Security (Priority 5): 30 points ✅
+Backup System (Priority 2): 12 points
+UI Update (Priority 1): 6 points
 ```
 
 ---
@@ -140,7 +100,7 @@ Core Firmware (3h): 6 points
 
 ### **Example 1: Perfect Score (100/100)**
 
-**Scenario:** Database Security Update on Saturday at 2:00 AM
+**Scenario:** Critical Database Patch on Saturday at 2:00 AM
 
 ```
 Patch Details:
@@ -149,52 +109,76 @@ Patch Details:
 - Required Crew: 2
 
 Time Slot: Saturday, 02:00
-- Predicted Load: 14 kW (from ML model)
-- Day: Saturday (weekend)
-- Hour: 2 (night)
+- Network Load: 15 kW (at that hour)
+- Crew Available: 5 members
 
 Score Breakdown:
-✅ Network Load (14 kW):     40 points (< 20 kW)
-✅ Time of Day (2am):        20 points (night)
-✅ Weekend Bonus:            10 points (Saturday)
-✅ Priority (5/5):           15 points (critical)
-✅ Duration (2h):             9 points (15 - 6)
+✅ Network Load (15 kW):     40 points (< 20 kW)
+✅ Crew Available (5/2):     30 points (2× needed)
+✅ Priority (5/5):           30 points (critical)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TOTAL SCORE:             94/100 ⭐⭐⭐
+   TOTAL SCORE:            100/100 ⭐⭐⭐
 ```
+
+**Recommendation:** Perfect conditions! Schedule immediately.
 
 ---
 
-### **Example 2: Good Score (80/100)**
+### **Example 2: Excellent Score (95/100)**
 
-**Scenario:** Application Server Update on Sunday at 11:00 PM
+**Scenario:** High Priority Server Update on Sunday at 11:00 PM
 
 ```
 Patch Details:
-- Priority: 4/5 (High)
+- Priority: 5/5 (Critical)
 - Duration: 1.5 hours
-- Required Crew: 2
+- Required Crew: 3
 
 Time Slot: Sunday, 23:00
-- Predicted Load: 18 kW (from ML model)
-- Day: Sunday (weekend)
-- Hour: 23 (late night)
+- Network Load: 18 kW (at that hour)
+- Crew Available: 4 members
 
 Score Breakdown:
 ✅ Network Load (18 kW):     40 points (< 20 kW)
-✅ Time of Day (11pm):       18 points (late night)
-✅ Weekend Bonus:            10 points (Sunday)
-✅ Priority (4/5):           12 points (high)
-✅ Duration (1.5h):          10.5 points (15 - 4.5)
+✅ Crew Available (4/3):     25 points (needed + 1)
+✅ Priority (5/5):           30 points (critical)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TOTAL SCORE:             90.5/100 ⭐⭐⭐
+   TOTAL SCORE:             95/100 ⭐⭐⭐
 ```
+
+**Recommendation:** Excellent time window! Highly recommended.
 
 ---
 
-### **Example 3: Fair Score (55/100)**
+### **Example 3: Good Score (70/100)**
 
-**Scenario:** Backup System Patch on Monday at 2:00 PM
+**Scenario:** Medium Priority App Update on Friday at 8:00 PM
+
+```
+Patch Details:
+- Priority: 3/5 (Medium)
+- Duration: 1 hour
+- Required Crew: 2
+
+Time Slot: Friday, 20:00
+- Network Load: 32 kW (at that hour)
+- Crew Available: 4 members
+
+Score Breakdown:
+⭐ Network Load (32 kW):     20 points (30-40 kW)
+✅ Crew Available (4/2):     30 points (2× needed)
+⭐ Priority (3/5):           18 points (medium)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOTAL SCORE:             68/100 ⭐⭐
+```
+
+**Recommendation:** Good time window, acceptable for medium priority.
+
+---
+
+### **Example 4: Fair Score (52/100)**
+
+**Scenario:** Low Priority Backup Patch on Tuesday at 6:00 PM
 
 ```
 Patch Details:
@@ -202,26 +186,25 @@ Patch Details:
 - Duration: 2 hours
 - Required Crew: 1
 
-Time Slot: Monday, 14:00
-- Predicted Load: 45 kW (from ML model)
-- Day: Monday (weekday)
-- Hour: 14 (business hours)
+Time Slot: Tuesday, 18:00
+- Network Load: 45 kW (at that hour)
+- Crew Available: 2 members
 
 Score Breakdown:
 ⚠️ Network Load (45 kW):     10 points (40-50 kW)
-❌ Time of Day (2pm):         5 points (business hours)
-❌ Weekend Bonus:             0 points (weekday)
-⚠️ Priority (2/5):            6 points (low)
-✅ Duration (2h):             9 points (15 - 6)
+✅ Crew Available (2/1):     30 points (2× needed)
+⚠️ Priority (2/5):           12 points (low)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TOTAL SCORE:             30/100 ⚠️
+   TOTAL SCORE:             52/100 ⚠️
 ```
+
+**Recommendation:** Fair for low priority patch, consider better window.
 
 ---
 
-### **Example 4: Poor Score (25/100)**
+### **Example 5: Poor Score (35/100)**
 
-**Scenario:** Core Network Firmware on Tuesday at 10:00 AM
+**Scenario:** Critical Patch on Monday at 2:00 PM
 
 ```
 Patch Details:
@@ -229,20 +212,19 @@ Patch Details:
 - Duration: 3 hours
 - Required Crew: 3
 
-Time Slot: Tuesday, 10:00
-- Predicted Load: 70 kW (from ML model)
-- Day: Tuesday (weekday)
-- Hour: 10 (business hours)
+Time Slot: Monday, 14:00
+- Network Load: 58 kW (at that hour)
+- Crew Available: 3 members (exactly needed)
 
 Score Breakdown:
-❌ Network Load (70 kW):      0 points (> 50 kW)
-❌ Time of Day (10am):        5 points (business hours)
-❌ Weekend Bonus:             0 points (weekday)
-✅ Priority (5/5):           15 points (critical)
-⚠️ Duration (3h):             6 points (15 - 9)
+❌ Network Load (58 kW):      5 points (> 50 kW)
+⚠️ Crew Available (3/3):     15 points (just enough)
+✅ Priority (5/5):           30 points (critical)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   TOTAL SCORE:             26/100 ❌
+   TOTAL SCORE:             50/100 ❌
 ```
+
+**Recommendation:** Poor time window, find better alternative.
 
 ---
 
@@ -262,27 +244,32 @@ Score Breakdown:
 
 ## 🧮 Quick Score Calculator
 
-### **Formula:**
+### **Simple Formula:**
 
 ```python
 score = (
-    network_load_points +    # 0-40 points (40% weight)
-    time_of_day_points +     # 0-20 points (20% weight)
-    weekend_bonus +          # 0-10 points (10% weight)
-    priority_points +        # 0-15 points (15% weight)
-    duration_points          # 0-15 points (15% weight)
+    network_load_points +    # 5-40 points (40% weight)
+    crew_available_points +  # 0-30 points (30% weight)
+    priority_points          # 6-30 points (30% weight)
 )
 
-final_score = min(100, max(0, score))
+# Network Load Points:
+if kw < 20:  → 40 points
+elif kw < 30: → 30 points
+elif kw < 40: → 20 points
+elif kw < 50: → 10 points
+else: → 5 points
+
+# Crew Available Points:
+if crew >= needed × 2: → 30 points
+elif crew >= needed + 2: → 25 points
+elif crew >= needed + 1: → 20 points
+elif crew >= needed: → 15 points
+else: → 0 points
+
+# Priority Points:
+(priority / 5) × 30
 ```
-
-### **Quick Rules of Thumb:**
-
-✅ **Weekend night + low load = 85-100 points**  
-✅ **Weekend + low load = 75-95 points**  
-⚠️ **Weekday night + low load = 65-85 points**  
-⚠️ **Weekday + moderate load = 40-60 points**  
-❌ **Business hours + high load = 0-35 points**
 
 ---
 
@@ -290,93 +277,62 @@ final_score = min(100, max(0, score))
 
 ### **To Get Higher Scores:**
 
-1. **Target Weekend Nights**
-   - Saturday/Sunday 12am-6am
-   - Automatic +30 points (weekend + night)
+1. **Target Low Network Load Times**
+   - Look for hours with <20 kW
+   - Automatic 40 points
 
-2. **Choose Low-Load Times**
-   - Use ML predictions to find <20 kW windows
-   - Gets you 40 points automatically
+2. **Ensure Plenty of Crew**
+   - Aim for 2× the required crew
+   - Gets you 30 points
 
-3. **Avoid Business Hours**
-   - 9am-5pm weekdays only get 5 points
-   - -15 point penalty vs night hours
+3. **Prioritize Critical Patches**
+   - Priority 5 = 30 points
+   - Priority 1 = 6 points
 
-4. **Schedule Shorter Patches**
-   - 1-hour patch = 12 points
-   - 3-hour patch = 6 points
-
-5. **Prioritize Critical Patches**
-   - Priority 5 = 15 points
-   - Priority 1 = 3 points
-
----
-
-## 🤖 ML Integration
-
-### **How ML Models Affect Scores:**
-
-1. **Linear Regression**
-   - Predicts network load for each hour
-   - More accurate = better score predictions
-   - 84% accuracy across 168 hours
-
-2. **Random Forest Classifier**
-   - Classifies urgency (Emergency/Manual/Automated)
-   - Influences priority scoring
-   - Provides confidence levels
-
-3. **Random Forest Regressor**
-   - Analyzes historical patterns
-   - Validates load predictions
-   - Identifies optimal windows
+4. **Quick Rule of Thumb:**
+   - Low load + plenty of crew + high priority = 95-100 points ✅
+   - Moderate load + enough crew + medium priority = 60-75 points ⚠️
+   - High load + minimal crew + low priority = 20-40 points ❌
 
 ---
 
 ## 📈 Real Score Distribution
 
-Based on 168 hours analyzed per week:
+Based on typical weekly patterns:
 
 ```
-Excellent (90-100):  ~12 hours  (7%)  - Weekend nights
-Good (75-89):        ~20 hours  (12%) - Weekend days, late nights
-Fair (60-74):        ~36 hours  (21%) - Weekday nights
-Poor (40-59):        ~50 hours  (30%) - Weekday evenings
-Very Poor (0-39):    ~50 hours  (30%) - Business hours
+Excellent (90-100):  ~10%  - Weekend nights, low load, plenty crew
+Good (75-89):        ~15%  - Weekend/night hours, good conditions
+Fair (60-74):        ~25%  - Evening hours, moderate conditions
+Poor (40-59):        ~30%  - Weekday evenings, higher load
+Very Poor (0-39):    ~20%  - Business hours, high load
 ```
 
-**Sweet Spot:** Saturday/Sunday 12am-6am = Consistent 90+ scores
+**Sweet Spot:** Weekend nights with <20 kW load = Consistent 90+ scores
 
 ---
 
-## 🎓 Advanced Concepts
+## 📊 Comparison Table
 
-### **Score vs. Risk:**
-- High score = Low risk
-- Score inversely proportional to:
-  - Service disruption probability
-  - User impact
-  - System load
+### **How Each Factor Contributes:**
 
-### **Weighted Optimization:**
-- Network load has highest weight (40%)
-- Reflects that system stability is paramount
-- Other factors fine-tune the optimization
-
-### **Dynamic Adjustment:**
-- Scores recalculate with updated ML predictions
-- Real-time network changes affect future scores
-- Cache refreshes every 5 minutes
+| Scenario | Load (kW) | Load Pts | Crew | Crew Pts | Priority | Pri Pts | Total |
+|----------|-----------|----------|------|----------|----------|---------|-------|
+| Perfect | 15 | 40 | 6/2 | 30 | 5 | 30 | **100** ⭐⭐⭐ |
+| Excellent | 18 | 40 | 4/3 | 25 | 5 | 30 | **95** ⭐⭐⭐ |
+| Good | 25 | 30 | 5/2 | 30 | 4 | 24 | **84** ⭐⭐ |
+| Fair | 35 | 20 | 3/2 | 30 | 3 | 18 | **68** ⭐ |
+| Poor | 48 | 10 | 2/2 | 15 | 2 | 12 | **37** ❌ |
 
 ---
 
 ## ✅ Summary
 
-**Scores represent:**
-- Optimal balance of 5 key factors
-- ML-predicted network conditions
-- Time-based usage patterns
-- Patch requirements and urgency
+**Scoring is based on 3 simple factors:**
+
+1. **Network Load (40 pts)** - Lower kW at that hour = higher score
+2. **Crew Available (30 pts)** - More crew available = higher score
+3. **Priority (30 pts)** - Higher priority = higher score
 
 **Higher scores mean:**
 - ✅ Lower system risk
@@ -384,12 +340,11 @@ Very Poor (0-39):    ~50 hours  (30%) - Business hours
 - ✅ Better success probability
 - ✅ Safer maintenance window
 
-**The algorithm aims for:**
+**The algorithm prioritizes:**
 - 🎯 90+ scores when possible
-- ⚠️ 75+ minimum for critical patches
-- 📊 Highest average score across all patches
+- ⚠️ 70+ minimum for critical patches
+- 📊 Highest score for each patch
 
 ---
 
-**Use scores to make data-driven scheduling decisions! 📊**
-
+**Simple, transparent, and effective scheduling! 📊**
