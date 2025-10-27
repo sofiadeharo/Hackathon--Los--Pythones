@@ -31,13 +31,7 @@ Electro-call is an intelligent patch scheduling application that uses Machine Le
 - Duration and crew requirement tracking
 - Urgent patch flagging
 
-### ⚡ **Intelligent Optimization Engine**
-- Multi-factor scoring algorithm:
-  - **40% Network Load**: Schedules during low-usage periods
-  - **30% Crew Availability**: Ensures adequate staffing
-  - **30% Priority**: Prioritizes critical updates
-- Automatic conflict resolution
-- Crew assignment optimization
+
 
 ### 💬 **AI Chatbot Assistant**
 - Natural language queries about optimal patch times
@@ -129,9 +123,6 @@ Hackathon--Los--Pythones/
 
 ---
 
-## 🧠 Machine Learning Model
-
-Electro-call uses a **Random Forest Regressor** with 100 decision trees to predict network loads and recommend optimal maintenance windows.
 
 ### Training Features:
 - Hour of day (0-23)
@@ -214,25 +205,6 @@ Scores range from 0-100, where higher is better:
 | 70-89 | 🟡 Good - Acceptable for scheduling |
 | 50-69 | 🟠 Fair - Consider alternatives if possible |
 | < 50 | 🔴 Poor - Avoid unless urgent |
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ---
 
 ## 👥 Team: Los Pythones
@@ -241,16 +213,3 @@ Built with ⚡ by Los Pythones for the Hackathon
 
 ---
 
-## 🙏 Acknowledgments
-
-- Inspired by real-world system maintenance challenges
-- Built for operations teams managing critical infrastructure
-- Designed for 24/7 monitoring centers
-
----
-
-## 📞 Support
-
-For questions or issues, please open a GitHub issue or contact the team.
-
-**Happy Patching! ⚡🐍**
