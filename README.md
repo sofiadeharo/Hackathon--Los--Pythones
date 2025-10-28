@@ -7,7 +7,7 @@ Electro-call is an intelligent patch scheduling application that uses Machine Le
 ![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.2.5-green.svg)
 ![scikit--learn](https://img.shields.io/badge/scikit--learn-1.0.2-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 
 ---
 
